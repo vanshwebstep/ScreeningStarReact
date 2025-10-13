@@ -846,7 +846,17 @@ const AdminChekin = () => {
         // Draw text on top
 
         const barY = nameY + 10;
-        const companyFontSize = 15;
+        // === Company Name Rendering (centered in right bar)
+        const companyFontSize = 14;
+        doc.setFontSize(companyFontSize);
+        doc.setTextColor(255);
+        doc.setFont("TimesNewRoman", "bold");
+
+        // Split text to fit inside the right bar width
+
+
+        // Draw text centered
+
         doc.setFontSize(companyFontSize);
 
         const totalAvailable = pageWidth - 20;
@@ -858,11 +868,21 @@ const AdminChekin = () => {
         const rightBarMinWidth = Math.max(totalAvailable / 2);
         const leftBarWidth = totalAvailable - rightBarMinWidth;
         const rightBarWidth = totalAvailable - leftBarWidth;
-        const wrappedText = doc.splitTextToSize(companyName, rightBarWidth);
-        const companyLineHeight = companyFontSize * 0.3528; // in mm (approx conversion from pt to mm)
-        const companyTextHeight = wrappedText.length * companyLineHeight;
         const paddingY = 9;
+        const wrappedText = doc.splitTextToSize(companyName, rightBarWidth - 20); // add padding
+
+        // Compute height for vertical centering
+        const companyLineHeight = companyFontSize * 0.3528; // convert pt → mm
+        const companyTextHeight = wrappedText.length * companyLineHeight;
+
+        // Calculate centered Y position
         const companyBarHeight = companyTextHeight + paddingY;
+
+        const companyTextY = barY + (companyBarHeight / 2) - (companyTextHeight / 2) + companyLineHeight / 2;
+
+        // Calculate X position (center of the right bar)
+        const companyTextX = 10 + leftBarWidth + rightBarWidth / 2;
+
         doc.setFillColor(...cyan);
         doc.rect(10, barY, leftBarWidth, companyBarHeight, "F");
 
@@ -930,12 +950,7 @@ const AdminChekin = () => {
         doc.setFont("TimesNewRoman", "bold");
         doc.text(lines, leftBarWidth / 2 - 5, barY + 9, { align: "left" });
 
-        doc.text(
-            wrappedText,
-            leftBarWidth + rightBarWidth / 2 - 5,
-            barY + 9,
-            { align: "left" }
-        );
+        doc.text(wrappedText, companyTextX, companyTextY + 2, { align: "center" });
 
 
         doc.setLineWidth(0.5);
