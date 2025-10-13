@@ -1871,10 +1871,7 @@ const GenerateReport = () => {
                 <a href="mailto:compliance@screeningstar.com" style="color:blue; text-decoration:underline;">compliance@screeningstar.com</a> | 
                 <a href="mailto:bgv@screeningstar.com" style="color:blue; text-decoration:underline;">bgv@screeningstar.com</a>
                 </p>
-                <img src="/no-risk.png" style="    max-width: 200px;
-    display: flex
-;
-    margin: 0 auto;" alt="Risk-free"/>
+               
 
     
              

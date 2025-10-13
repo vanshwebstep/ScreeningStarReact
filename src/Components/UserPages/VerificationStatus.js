@@ -2105,7 +2105,7 @@ const VerificationStatus = () => {
             const imgHeight = 40;
             const centerXNew = (pageWidth - imgWidth) / 2;
     
-            doc.addImage(sealImage, "PNG", centerXNew, endOfDetailY, imgWidth, imgHeight);
+            // doc.addImage(sealImage, "PNG", centerXNew, endOfDetailY, imgWidth, imgHeight);
     
     
             if (endOfDetailY + disclaimerButtonHeight > doc.internal.pageSize.height - 20) {
