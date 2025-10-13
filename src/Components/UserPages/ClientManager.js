@@ -269,7 +269,7 @@ const ClientManager = () => {
             sub_client: item.sub_client,
             photo: item.photo,
             location: item.location,
-            generate_report_type: item.generate_report_type || 'CONFIDENTIAL BACKGROUND SCREENING REPORT',
+            generate_report_type: item.generate_report_type || 'CONFIDENTIAL BACKGROUND SCREENING REPOR',
             services: updatedServices || [], // Ensure services are passed correctly
         });
         setClientApplicationId(item.id);
@@ -738,6 +738,9 @@ const ClientManager = () => {
             setScrollWidth(tableScrollRef.current.scrollWidth + "px");
         }
     }, [paginatedData, loading]);
+
+    console.log('formData',formData)
+
     return (
         <div className="bg-[#c1dff2]  border border-black " ref={clientEditRef} id="clientedit">
             <div className="bg-white md:p-12 p-6 w-full mx-auto">
@@ -774,7 +777,7 @@ const ClientManager = () => {
                             <div className="mb-4">
                                 <label className="block text-left w-full  m-auto mb-2 text-gray-700" htmlFor="report status">Generate Report Type:<span className="text-red-500 text-xl" >*</span></label>
                                 <select name="generate_report_type" id=""
-                                    value={formData.generate_report_type}
+                                    value={formData.generate_report_type || 'CONFIDENTIAL BACKGROUND SCREENING REPORT'}
                                     onChange={handleChange}
                                     className="border rounded-md p-2 mt-2 uppercase w-full">
                                     <option value="CONFIDENTIAL BACKGROUND SCREENING REPORT">

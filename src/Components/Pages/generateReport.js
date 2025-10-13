@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaLaptopHouse } from 'react-icons/fa';
 import { jsPDF } from 'jspdf';
 import { useApiLoading } from '../ApiLoadingContext';
-import PDFuser from "../../imgs/PDFuser.png"
 import Select from "react-select";
 import logo3 from "../../imgs/3.png"
 import logo4 from "../../imgs/4.png"
@@ -1430,6 +1429,15 @@ const GenerateReport = () => {
                 }
                 return status;  // Return the original status if no color name is found
             };
+
+            const finalStatus = (formData.updated_json.insuffDetails.final_verification_status || "N/A").toUpperCase();
+            const statusLower = finalStatus.toLowerCase();
+
+            let statusImage = "";
+            if (statusLower === "green") statusImage = "/green.png";
+            else if (statusLower === "red") statusImage = "/red.png";
+            else if (statusLower === "orange") statusImage = "/orange.png";
+            else if (statusLower === "yellow") statusImage = "/yellow.png";
             const screeningLogo = "/screeningLogoNew.png"
 
             let headerTableData;
@@ -1439,7 +1447,7 @@ const GenerateReport = () => {
                     ["REFERENCE ID", String(applicationRefID).toUpperCase(), "DATE OF BIRTH", formatDate(cmdDates.dob) || "N/A"],
                     ["EMPLOYEE ID", String(cmtData.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(formData.updated_json.insuffDetails.first_insuff_reopened_date) || "N/A"],
                     ["VERIFICATION INITIATED", formatDate(cmdDates.initiationDate).toUpperCase() || "N/A", "FINAL REPORT DATE", formatDate(formData.updated_json.insuffDetails.report_date) || "N/A"],
-                    ["VERIFICATION PURPOSE", (formData.updated_json.insuffDetails.final_verification_status || "EMPLOYMENT").toUpperCase(), "VERIFICATION STATUS", (formData.updated_json.insuffDetails.final_verification_status || "N/A").toUpperCase()],
+                    // ["VERIFICATION PURPOSE", (formData.updated_json.insuffDetails.final_verification_status || "EMPLOYMENT").toUpperCase(), "VERIFICATION STATUS", (formData.updated_json.insuffDetails.final_verification_status || "N/A").toUpperCase()],
                     ["REPORT TYPE", (formData.updated_json.insuffDetails.report_type || "EMPLOYMENT").replace(/_/g, " ").toUpperCase(), "REPORT STATUS", (formData.updated_json.insuffDetails.report_status || "N/A").toUpperCase()]
                 ];
             } else if (genrateReportType == 'VENDOR CONFIDENTIAL SCREENING REPORT') {
@@ -1448,7 +1456,7 @@ const GenerateReport = () => {
                     ["EMPLOYEE ID", String(cmtData.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(formData.updated_json.insuffDetails.first_insuff_reopened_date) || "N/A"],
                     ["VERIFICATION INITIATED", formatDate(cmdDates.initiationDate).toUpperCase() || "N/A", "FINAL REPORT DATE", formatDate(formData.updated_json.insuffDetails.report_date) || "N/A"],
                     // This row has only 2 cells (spans full row)
-                    ["VERIFICATION STATUS", (formData.updated_json.insuffDetails.final_verification_status || "N/A").toUpperCase(), "REPORT STATUS", (formData.updated_json.insuffDetails.report_status || "N/A").toUpperCase()],
+                    // ["VERIFICATION STATUS", (formData.updated_json.insuffDetails.final_verification_status || "N/A").toUpperCase(), "REPORT STATUS", (formData.updated_json.insuffDetails.report_status || "N/A").toUpperCase()],
                     ["REPORT TYPE", (formData.updated_json.insuffDetails.report_type || "EMPLOYMENT").replace(/_/g, " ").toUpperCase()]
                 ];
             }
@@ -1475,7 +1483,6 @@ const GenerateReport = () => {
        <div style="margin-bottom: 1.5rem;
     padding: 1rem 0;
     border-radius: 0.5rem;
-    height: 211px;
     display: flex
 ;
     align-items: end;">
@@ -1486,51 +1493,68 @@ const GenerateReport = () => {
     align-items: center;
     gap: 0;
     min-height: 120px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 3.5rem;
     width: 100%;">
             <div style="width: 50%;">
             <div 
-            style="width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    border: 8px solid #3b82f6;
-    display: flex;
+            style="max-width: 263px;
+    border-radius: 0;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-    position: absolute;
-    left: 21%;
-    margin-top: -45px;">
+    display: flex
+;
+    margin: 0 auto">
                 <img 
-                src="${applicantImage ? applicantImage : PDFuser}" 
+                src="${applicantImage ? applicantImage : "/no-image.png"}" 
                 alt="Profile Picture" 
                 style="width: 100%; height: 100%; object-fit: cover;"
                 />
             </div>
             </div>
-            <div style="width: 50%; text-align:left;">
+            <div style="    width: 50%;
+    text-align: left;
+    display: flex
+;
+    align-items: center;
+    justify-content: center;">
+          
+            ${statusImage
+                    ? `<img src="${statusImage}" alt="${finalStatus} status" style="width: 50%; height: 300px; margin-top: 8px;" />`
+                    : ""
+                }
+        
 
-            <h2 style="font-size: 30px; font-weight: bold; margin: 0;">${formData.client_applicant_name || 'N/A'}</h2>
             </div>
             </div>
 
             <div style="
-    display: flex;
-    justify-content: end;
+  display: flex;
+    justify-content: space-between;
     min-height: 100px;
     background: #3b82f6;
     color: #ffffff;
     padding: 0;
     text-align: right;
     width: 100%;">
+                    <h2 style="font-size: 30px;
+    font-weight: bold;
+    margin: 0;
+    width: 50%;
+    text-align: center;
+    display: flex
+;
+    align-items: center;
+    justify-content: center;">${formData.client_applicant_name || 'N/A'}</h2>
+
            <div style="width: 50%;
     background: #a1c2fa;
     height: auto;
     padding: 0 10px;
-    display: flex
-;
-    align-items: center;">
-            <p style="font-size: 25px; font-weight: 600; margin: 0; padding-left: 20px;">
+    display: flex;
+    align-items: center;
+    justify-content: center;">
+
+            <p style="font-size: 25px; text-align:center; font-weight: 600; margin: 0; padding-left: 20px;">
                 ${formData.client_organization_name || 'N/A'}
             </p></div>
             </div>
@@ -1543,24 +1567,24 @@ const GenerateReport = () => {
   ${safeHeaderTableData.map(row => `
     <tr>
         ${row.map((cell, i) => {
-                const safeCell = (cell === null || cell === undefined || cell === '') ? 'N/A' : cell;
+                    const safeCell = (cell === null || cell === undefined || cell === '') ? 'N/A' : cell;
 
-                // Default styling
-                let cellStyle = `font-weight: ${i % 2 === 0 ? 'bold' : 'normal'};`;
+                    // Default styling
+                    let cellStyle = `font-weight: ${i % 2 === 0 ? 'bold' : 'normal'};`;
 
-                // Check if this is the Verification Status column
-                if (row[i - 1] && row[i - 1].toString().toLowerCase().includes("verification status")) {
-                    const value = safeCell.toUpperCase();
-                    if (value === "GREEN") {
-                        cellStyle += " color: green; font-weight: bold;";
-                    } else if (value === "RED") {
-                        cellStyle += " color: red; font-weight: bold;";
-                    } else if (value === "YELLOW") {
-                        cellStyle += " color: orange; font-weight: bold;";
+                    // Check if this is the Verification Status column
+                    if (row[i - 1] && row[i - 1].toString().toLowerCase().includes("verification status")) {
+                        const value = safeCell.toUpperCase();
+                        if (value === "GREEN") {
+                            cellStyle += " color: green; font-weight: bold;";
+                        } else if (value === "RED") {
+                            cellStyle += " color: red; font-weight: bold;";
+                        } else if (value === "YELLOW") {
+                            cellStyle += " color: orange; font-weight: bold;";
+                        }
                     }
-                }
 
-                return `
+                    return `
                 <td 
                     class="border border-blue-500 px-2 py-1" 
                     style="${cellStyle}"
@@ -1568,7 +1592,7 @@ const GenerateReport = () => {
                     ${safeCell}
                 </td>
             `;
-            }).join('')}
+                }).join('')}
     </tr>
 `).join('')}
 
@@ -1847,6 +1871,10 @@ const GenerateReport = () => {
                 <a href="mailto:compliance@screeningstar.com" style="color:blue; text-decoration:underline;">compliance@screeningstar.com</a> | 
                 <a href="mailto:bgv@screeningstar.com" style="color:blue; text-decoration:underline;">bgv@screeningstar.com</a>
                 </p>
+                <img src="/no-risk.png" style="    max-width: 200px;
+    display: flex
+;
+    margin: 0 auto;" alt="Risk-free"/>
 
     
              
@@ -1872,7 +1900,7 @@ const GenerateReport = () => {
                              .field-image { max-width: 150px; max-height: 150px; border-radius: 5px; object-fit: cover; }
                              .headerImage { max-width: 100%; max-height: 8rem; border-radius: 5px; object-fit: cover; }
                             .footer { text-align: center; font-size: 12px; margin-top: 20px; color: #7f8c8d; }
-                             .report-container {width: 100%; border-collapse: collapse;  margin: 20px 0;font-size: 16px; text-align: left; }
+                             .report-container {width: 100%; border-collapse: collapse;  margin: 30px 0;font-size: 16px; text-align: left; }
         .report-container th, .report-container td {
             border: 2px solid #4285f5;
             padding: 8px;
@@ -1889,8 +1917,8 @@ const GenerateReport = () => {
     margin-bottom: 20px;
     font-weight: bold;
     color:#fff;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding-top: 13px;
+    padding-bottom: 13px;
 
 }
         .colorcode {
