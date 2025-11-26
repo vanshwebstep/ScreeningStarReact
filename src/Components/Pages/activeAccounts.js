@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState,useRef, useCallback } from 'react';
 import Modal from 'react-modal';
 import { useApiLoading } from '../ApiLoadingContext';
 import * as XLSX from 'xlsx';
@@ -12,6 +12,18 @@ Modal.setAppElement('#root'); // Make sure to set the app element for accessibil
 const ActiveAccounts = () => {
   const { validateAdminLogin, setApiLoading, apiLoading } = useApiLoading();
   const [responseError, setResponseError] = useState(null);
+     const tableScrollRef = useRef(null);
+    const topScrollRef = useRef(null);
+    const [scrollWidth, setScrollWidth] = useState("100%");
+
+    // 🔹 Sync scroll positions
+    const syncScroll = (e) => {
+        if (e.target === topScrollRef.current) {
+            tableScrollRef.current.scrollLeft = e.target.scrollLeft;
+        } else {
+            topScrollRef.current.scrollLeft = e.target.scrollLeft;
+        }
+    };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalServices, setModalServices] = useState([]);
@@ -39,7 +51,7 @@ const ActiveAccounts = () => {
   const [isBlockLoading, setIsBlockLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const optionsPerPage = [10, 50, 100, 200];
+  const optionsPerPage = [10, 50, 100, 200,500,1000];
   const totalPages = Math.ceil(activeList.length / rowsPerPage);
 
   console.log('thisscedclien', selectedClient);
@@ -530,6 +542,12 @@ const ActiveAccounts = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Clients');
     XLSX.writeFile(wb, 'clients_data.xlsx');
   };
+  useEffect(() => {
+    if (tableScrollRef.current) {
+      setScrollWidth(tableScrollRef.current.scrollWidth + "px");
+    }
+  }, [paginatedData, loading]); // recalc whenever data changes
+
 
   const handleUpdateBranch = () => {
     if (!currentBranch) return;
@@ -637,8 +655,14 @@ const ActiveAccounts = () => {
           </div>
         </div>
 
+ <div className="table-container rounded-lg">
+      {/* Top Scroll */}
+      <div className="top-scroll" ref={topScrollRef} onScroll={syncScroll}>
+        <div className="top-scroll-inner" style={{ width: scrollWidth }} />
+      </div>
 
-        <div className=" overflow-scroll">
+      {/* Actual Table Scroll */}
+      <div className="table-scroll rounded-lg" ref={tableScrollRef} onScroll={syncScroll}>
           <table className="min-w-full border-collapse border border-black rounded-lg">
             <thead className="rounded-lg border border-black">
               <tr className="bg-[#c1dff2] text-[#4d606b] whitespace-nowrap text-left">
@@ -806,6 +830,7 @@ const ActiveAccounts = () => {
               </tbody>
             )}
           </table>
+        </div>
 
         </div>
         <div className="flex justify-between items-center mt-4">

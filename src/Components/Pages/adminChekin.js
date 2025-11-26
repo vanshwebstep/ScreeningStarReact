@@ -13,21 +13,20 @@ import PDFuserGirl from "../../imgs/PDFuserGirl.png"
 import isoLogo from "../../imgs/iso.png"
 import isoLogo2 from "../../imgs/iso2.png"
 import screeningStarLogo from "../../imgs/screeningLogoNew.png"
-import logo3 from "../../imgs/logo-3.png"
-import logo4 from "../../imgs/logo-4.png"
-import logo5 from "../../imgs/logo-5.png"
-import logo6 from "../../imgs/logo-6.png"
-import logo9 from "../../imgs/logo-8.png"
-import aadhaarIcon from "../../imgs/aadhaarIcon.png"
-import logo8 from "../../imgs/logo8.png"
-import emblemIcon from "../../imgs/emblemIcon.png";
+import logo3 from "../../imgs/3.png"
+import logo4 from "../../imgs/4.png"
+import logo5 from "../../imgs/5.png"
+import logo6 from "../../imgs/6.png"
+import logo9 from "../../imgs/8.png"
+import aadhaarIcon from "../../imgs/1.png"
+import logo8 from "../../imgs/7.png"
+import emblemIcon from "../../imgs/2.png";
 import colored from "../../imgs/colored.png";
 import greenShield from "../../imgs/greenShield.png";
 import yellowShield from "../../imgs/yellowShield.png";
 import orangeShield from "../../imgs/orangeShield.png";
 import emailIconGreen from "../../imgs/emailIconGreen.png";
 import Signature from "../../imgs/Signature.png";
-
 import Default from "../../imgs/default.png"
 import { useApiLoading } from '../ApiLoadingContext';
 import JSZip from 'jszip';
@@ -36,6 +35,8 @@ import { FaFlag } from 'react-icons/fa';
 import { FaChevronLeft } from 'react-icons/fa';
 const AdminChekin = () => {
 
+    const [servicesHeadings, setServicesHeadings] = useState([]);
+    const [viewServices, setViewServices] = useState(false);
 
     const [activeId, setActiveId] = useState(null);
     const [selectedValue, setSelectedValue] = useState("");
@@ -47,6 +48,8 @@ const AdminChekin = () => {
     const [loadingIndex, setLoadingIndex] = useState(null);
     const [servicesDataInfo, setServicesDataInfo] = useState('');
     const [expandedRow, setExpandedRow] = useState({ index: '', headingsAndStatuses: [] });
+    const [headingsAndStatuses, setHeadingsAndStatuses] = useState([]);
+
     const navigate = useNavigate();
     const location = useLocation();
     const [adminTAT, setAdminTAT] = useState('');
@@ -63,19 +66,57 @@ const AdminChekin = () => {
     const [isBulkDownloading, setIsBulkDownloading] = useState(false);
 
     const [viewLoading, setViewLoading] = useState(false);
+    const tableScrollRef = useRef(null);
+    const topScrollRef = useRef(null);
+    const [scrollWidth, setScrollWidth] = useState("100%");
 
+    // 🔹 Sync scroll positions
+    const syncScroll = (e) => {
+        if (e.target === topScrollRef.current) {
+            tableScrollRef.current.scrollLeft = e.target.scrollLeft;
+        } else {
+            topScrollRef.current.scrollLeft = e.target.scrollLeft;
+        }
+    };
 
     const [isHighlightLoading, setIsHighlightLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(null);
     const [loadingGenrate, setLoadingGenrate] = useState(null);
     const [filterData, setFilterData] = useState([]);
 
+    const changeLabelStatus = (label) => {
+        const mapping = {
+            "overall": "application_count",
+            "pending": "pending_application_count",
+            "qc pending": "qc_pending_count",
+            "completed": "completed_application_count",
+            "wip": "wip_application_count",
+            "insuff": "insuff_application_count",
+            "stopcheck": "stopcheck_application_count",
+            "not doable": "not_doable_application_count",
+            "candidate denied": "candidate_denied_application_count"
+        };
+
+        if (!label) return null;
+
+        let normalized = label.toLowerCase().replace(/_/g, ' ').trim();
+        if (mapping[normalized]) {
+            return mapping[normalized];
+        }
+
+        const reversed = Object.entries(mapping).find(([key, value]) => value === label);
+        if (reversed) {
+            return reversed[0];
+        }
+
+        return null;
+    };
 
 
 
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const optionsPerPage = [10, 50, 100, 200];
+    const optionsPerPage = [10, 50, 100, 200, 500, 1000];
     const totalPages = Math.ceil(data.length / rowsPerPage);
     const colorNames = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'];
     const getColorStyle = (status) => {
@@ -101,6 +142,29 @@ const AdminChekin = () => {
     const branchId = queryParams.get('branchId');
     const adminId = JSON.parse(localStorage.getItem("admin"))?.id;
     const token = localStorage.getItem('_token');
+
+    function getStatusByServiceId(annexures, serviceId) {
+        if (!Array.isArray(annexures)) {
+            return 'NIL';
+        }
+
+        // Match with service_id instead of serviceId
+        const annexure = annexures.find(item => String(item.service_id) === String(serviceId));
+
+        if (!annexure) {
+            return 'NIL';
+        }
+
+        console.log('✅ Match found:', annexure);
+
+        // Prefer annexureData.status if it exists
+        if (annexure.annexureData && 'status' in annexure.annexureData) {
+            console.log('📤 Returning annexureData.status:', annexure.annexureData.status);
+            return annexure.annexureData.status || 'INITIATED';
+        }
+
+        return 'INITIATED';
+    }
 
     // Fetch data from the main API
     const fetchData = useCallback((filterStatus = null) => {
@@ -147,6 +211,51 @@ const AdminChekin = () => {
                     deadline_date: customer.deadline_date ? customer.deadline_date : customer.new_deadline_date
                 }));
                 setData(updatedCustomers || []);
+                const applicationData = result.customers;
+
+                const allHeadings = applicationData.flatMap(customer => {
+                    if (!customer.annexureResults) {
+                        console.log('Missing annexureResults for customer:', customer.id);
+                        return [];
+                    }
+
+                    return customer.annexureResults.flatMap(item => {
+                        if (!item.reportFormJson || !item.reportFormJson.json) {
+                            console.log('Missing or invalid reportFormJson for service_id:', item.service_id);
+                            return [];
+                        }
+
+                        try {
+                            const parsedJson = JSON.parse(item.reportFormJson.json);
+                            return [{
+                                id: item.service_id,
+                                heading: parsedJson.heading || []
+                            }];
+                        } catch (e) {
+                            console.log('Failed to parse JSON for item:', item);
+                            return [];
+                        }
+                    });
+                });
+
+
+                // ✅ Deduplicate the headings
+                const uniqueHeadingsMap = new Map();
+
+                allHeadings.forEach(({ id, heading }) => {
+                    if (!uniqueHeadingsMap.has(id)) {
+                        uniqueHeadingsMap.set(id, heading);
+                    }
+                });
+
+                const uniqueHeadings = Array.from(uniqueHeadingsMap, ([id, heading]) => ({ id, heading }));
+
+
+                console.log('Unique Headings:', uniqueHeadings);
+                setServicesHeadings(uniqueHeadings);
+
+
+
 
                 const newToken = result.token || result._token || token;
                 if (newToken) {
@@ -515,7 +624,7 @@ const AdminChekin = () => {
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-
+            doc.setFillColor(255);
             const leftText = 'ISO QTY MGT - 9001:2015';
             const centerText = `PAGE ${i} OF ${totalPages}`;
             const rightText = '(ISO) IMSS - 27001:2013';
@@ -527,7 +636,7 @@ const AdminChekin = () => {
 
             // Set fill color for footer background
             if (i === 1 || i === totalPages) {
-                doc.setFillColor(243, 251, 253); // Light blue
+                doc.setFillColor(255, 255, 255);
             } else {
                 doc.setFillColor(255, 255, 255); // White
             }
@@ -537,7 +646,7 @@ const AdminChekin = () => {
 
             // Draw top border of footer
 
-            doc.setDrawColor(62, 118, 165);
+            doc.setDrawColor(46, 93, 172);
 
             // #3d75a6
             doc.setLineWidth(0.4);
@@ -565,6 +674,27 @@ const AdminChekin = () => {
 
 
 
+    function changeLabel(label, generate_report_type) {
+
+        if (generate_report_type !== 'VENDOR CONFIDENTIAL SCREENING REPORT') {
+            return label;
+        }
+
+        const labelChangeAsPerVendorOrBGV = {
+            "name of the applicant:": "Name of the Organization:",
+            "date of birth:": "Date of Incorporation:",
+            "applicant details": "ORGANISATION DETAILS"
+        };
+
+        if (label && typeof label === "string" && label.trim() !== "") {
+            const lowerLabel = label.trim().toLowerCase();
+            if (labelChangeAsPerVendorOrBGV.hasOwnProperty(lowerLabel)) {
+                return labelChangeAsPerVendorOrBGV[lowerLabel];
+            }
+        }
+        return label;
+    }
+
     const generatePDF = async (index, maindata, returnInBlob = false) => {
         let isFirstLoad = true;
 
@@ -585,12 +715,11 @@ const AdminChekin = () => {
 
         //    // console.log('applicationInfo.custom_logo',)  
         const servicesData = (await fetchServicesData(applicationInfo.main_id, applicationInfo.services, '1')) || [];
-        const doc = new jsPDF();
+        const doc = new jsPDF({ compress: true });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         // RGB for #F3FBFD
-
-        doc.setFillColor(243, 251, 253);
+        doc.setFillColor(255, 255, 255);
 
         // Draw full-page background rect (before content)
         doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
@@ -640,29 +769,31 @@ const AdminChekin = () => {
         let yPosition;
         const centerX = pageWidth / 2;
         const sideMargin = 10;
-        const cyan = [85, 179, 194];
-
+        const cyan = [67, 133, 246];
+        //    const cyan = [67, 133, 246];  /*  Green  */
+        // const cyan = [252, 187, 5];   /*Yellow  */
+        // const cyan = [231, 65, 54];  /*Red  */
+        // const cyan = [67, 133, 246]; /* Blue  */
         const profileSize = 50;
-        const profileY = 45;
-        const nameFontSize = 34;
-        const companyBarHeight = 15;
+        const profileY = 55;
+        const nameFontSize = 16;
 
-        // === 1. LOGO ===
         const screeningLogo = screeningStarLogo;
         const customLogo =
             applicationInfo?.custom_template === "yes" && applicationInfo?.custom_logo?.trim()
                 ? await fetchImageToBase(applicationInfo.custom_logo.trim())
                 : null;
         const logoBase64 = customLogo?.[0]?.base64 || screeningLogo;
-        doc.addImage(logoBase64, "PNG", centerX - 27, 3, 55, 38);
+        doc.addImage(logoBase64, "PNG", centerX - 37, 10, 76, 24);
 
         // === 2. MAIN TITLE BAR ===
         const mainTitle = applicationInfo?.generate_report_type || "CONFIDENTIAL BACKGROUND SCREENING REPORT";
 
         const titleY = 39;
-        doc.setFillColor(...cyan); // [85, 179, 194]
-        doc.setDrawColor(62, 118, 165);
-        doc.setLineWidth(0.4); // Default thin line
+        doc.setFillColor(...cyan); // [67, 133, 246]
+        doc.setDrawColor(46, 93, 172);
+        // Default thin line
+
 
 
         doc.rect(10, titleY, pageWidth - 20, 15, "FD"); // Now border will show
@@ -670,70 +801,175 @@ const AdminChekin = () => {
 
         doc.setFont("TimesNewRoman", "bold");
         doc.setFontSize(11);
-        doc.setTextColor(0);
+        doc.setTextColor(255);
 
         doc.text(mainTitle, centerX, titleY + 9, { align: "center" });
 
         // === 3. PROFILE PHOTO (rounded)
-        let profilePhoto = applicationInfo.gender === "Female" ? PDFuserGirl : PDFuser;
+        let profilePhoto = applicationInfo.gender === "Female" ? '/no-image.png' : '/no-image.png';
+        let isProfileExist = false;
         if (applicationInfo?.photo) {
             const imgUrl = await fetchImageToBase(applicationInfo.photo.trim());
             profilePhoto = imgUrl?.[0]?.base64 || profilePhoto;
+            isProfileExist = true;
         }
-
         doc.setFillColor(255);
 
 
         // === 4. NAME (centered below profile)
-      // === 4. NAME (centered below profile)
-      
-const nameText = applicationInfo.name || "Name";
-const nameY = profileY + 45;
-doc.setFontSize(nameFontSize);
-doc.setTextColor(0);
-doc.setFont("TimesNewRoman", "bold");
-const lines = doc.splitTextToSize(nameText, 120); // 100 is max width
-doc.text(lines, centerX + 20, nameY, { align: "center" });
-// === 5. COMPANY NAME BAR (adaptive split based on name and company)
-const barY = nameY + 20;
-const companyFontSize = 15;
-doc.setFontSize(companyFontSize);
+        // === 4. NAME (centered below profile)
 
-const totalAvailable = pageWidth - 20;
-const profileImageWidth = 45;
-const imageX = 30;
+        const nameText = applicationInfo.name || "Name";
+        const nameY = profileY + 55;
+        doc.setFontSize(nameFontSize);
+        doc.setFont("TimesNewRoman", "bold");
+        doc.setTextColor(0, 0, 0); // text color white
 
-// === Measure text widths
-const companyTextWidth = doc.getTextWidth(companyName) + 40; // padding
-const rightBarMinWidth = Math.max(companyTextWidth, totalAvailable / 2);
-const leftBarWidth = totalAvailable - rightBarMinWidth;
-const rightBarWidth = totalAvailable - leftBarWidth;
+        // Split text into lines
+        const lines = doc.splitTextToSize(nameText, 100);
+        const lineHeight = nameFontSize * 0.3528; // approximate line height in mm
+        const textHeight = lines.length * lineHeight;
 
-// === Draw Left Bar (from x=10)
-doc.setFillColor(...cyan);
-doc.rect(10, barY, leftBarWidth, companyBarHeight, "F");
+        // Optional: add slight shadow for blur effect
+        doc.setDrawColor(0, 0, 0, 0.1); // light shadow
+        doc.setFillColor(255); // blue background   onchange
 
-// === Draw Right Bar (next to left bar)
-doc.setFillColor(145, 203, 215);
-doc.rect(10 + leftBarWidth, barY, rightBarWidth, companyBarHeight, "F");
+        // Draw rounded rectangle with slight blur/shadow effect
+        const rectX = centerX + 20 - 60; // adjust for center
+        const rectY = nameY - lineHeight;
+        const rectWidth = 120;
+        const rectHeightt = textHeight + 4;
+        const borderRadius = 3; // small rounded corners
 
-// === Draw Profile Image (on top of left bar)
-const roundedImage = await getRoundedImage(profilePhoto, 100);
-doc.addImage(roundedImage, "PNG", imageX, profileY + 30, profileImageWidth, profileImageWidth);
+        doc.roundedRect(rectX, rectY, rectWidth, rectHeightt, borderRadius, borderRadius, 'F');
 
-// === Company Name Text (centered in right bar)
-doc.setFontSize(companyFontSize);
-doc.setTextColor(255);
-doc.setFont("TimesNewRoman", "bold");
-doc.text(
-    companyName,
-    10 + leftBarWidth + rightBarWidth / 2,
-    barY + 9,
-    { align: "center" }
-);
+        // Draw text on top
+
+        const barY = nameY + 10;
+        // === Company Name Rendering (centered in right bar)
+        const companyFontSize = 14;
+        doc.setFontSize(companyFontSize);
+        doc.setTextColor(255);
+        doc.setFont("TimesNewRoman", "bold");
+
+        // Split text to fit inside the right bar width
 
 
+        // Draw text centered
 
+        doc.setFontSize(companyFontSize);
+
+        // ---------------------------
+        // Layout & sizing (constants)
+        // ---------------------------
+        const margin = 10;
+        const totalAvailable = pageWidth - 20; // pageWidth minus left & right page margins
+        const profileImageWidth = 45;
+        const imageX = 35;
+
+        // === decide bar widths
+        const rightBarMinWidth = Math.max(totalAvailable / 2); // your logic; this yields half
+        const leftBarWidth = totalAvailable - rightBarMinWidth;
+        const rightBarWidth = totalAvailable - leftBarWidth;
+
+        // vertical positions
+        const paddingY = 9;      // vertical padding inside bars
+        const barX = margin;     // left-most X for bars
+        // barY is assumed provided above in your code
+
+        // ---------------------------
+        // Company name wrapping + height
+        // ---------------------------
+        doc.setFontSize(companyFontSize);
+        doc.setFont("TimesNewRoman", "bold");
+
+        // Wrap the company name into the right bar width (leave horizontal padding)
+        const horizontalPadding = 10;
+        const wrappedRight = doc.splitTextToSize(companyName, rightBarWidth - horizontalPadding * 2);
+
+        // Convert font size (pt) to approximate mm line height (your previous factor)
+        const companyLineHeight = companyFontSize * 0.3528;
+        const companyTextHeight = wrappedRight.length * companyLineHeight;
+
+        // Height of the combined bar area used for vertical centering
+        const companyBarHeight = companyTextHeight + paddingY * 2 - 4;
+
+        // ---------------------------
+        // Draw bars (left + right) and border
+        // ---------------------------
+        doc.setFillColor(...cyan);
+        doc.rect(barX, barY, leftBarWidth, companyBarHeight, "F");
+
+        doc.setFillColor(161, 194, 250);
+        doc.rect(barX + leftBarWidth, barY, rightBarWidth, companyBarHeight, "F");
+
+        const borderColorr = [67, 133, 246];
+        const borderThickness = 1.5;
+        doc.setLineWidth(borderThickness);
+        doc.setDrawColor(...borderColorr);
+
+        // ---------------------------
+        // Images (status + profile)
+        // ---------------------------
+        const statusImages = {
+            GREEN: "/green.png",
+            RED: "/red.png",
+            YELLOW: "/yellow.png",
+            ORANGE: "/orange.png",
+        };
+
+        const status = (applicationInfo.final_verification_status || "").toUpperCase();
+        const statusImage = statusImages[status];
+        if (statusImage) {
+            // place status image inside right bar near top (adjust coordinates to taste)
+            doc.addImage(statusImage, "PNG", barX + leftBarWidth + 20, profileY + 13, 67, 40);
+        } else {
+            doc.text("No status image available", barX + leftBarWidth + 10, barY + 12);
+        }
+
+        const roundedImage = profilePhoto;
+        try {
+            if (profilePhoto) {
+                doc.addImage(profilePhoto, "PNG", imageX, profileY + 15, 40, 40);
+            }
+        } catch (err) {
+            console.warn("Profile image is missing or corrupted → skipping image.");
+        }
+
+
+        // ---------------------------
+        // Compute center positions
+        // ---------------------------
+        // center X of right bar (absolute page coordinates)
+        const rightBarCenterX = barX + leftBarWidth + (rightBarWidth / 2);
+
+        // center X of left bar (if you need to center text in left bar)
+        const leftBarCenterX = barX + leftBarWidth / 2;
+
+        // Compute vertical center Y for text inside the bar
+        // We want the vertical center of the text block to sit in the center of the bar.
+        const companyTextY = barY + 1 + (companyBarHeight / 2) - (companyTextHeight / 2) + companyLineHeight / 2;
+        // note: for jsPDF, y is baseline for a line — we added half a line to better align
+
+        // ---------------------------
+        // Draw company name centered in the RIGHT bar
+        // ---------------------------
+        doc.setFontSize(companyFontSize);
+        doc.setTextColor(255);
+
+        // Use the wrappedRight content and draw it centered at rightBarCenterX
+        // doc.text can take an array (multiline) and an options object { align: "center" }
+        doc.text(wrappedRight, rightBarCenterX, companyTextY, { align: "center" });
+
+        // ---------------------------
+        // Example: if you also want a centered label inside LEFT bar (optional)
+        // ---------------------------
+        const wrappedLeft = doc.splitTextToSize(lines, leftBarWidth - horizontalPadding * 2);
+        const leftTextHeight = wrappedLeft.length * companyLineHeight;
+        const leftTextY = barY + 1 + (companyBarHeight / 2) - (leftTextHeight / 2) + companyLineHeight / 2;
+        doc.text(wrappedLeft, leftBarCenterX, leftTextY, { align: "center" });
+
+        doc.setLineWidth(0.5);
         doc.autoTable({
             body: headerTableDataOne,
             startY: 54,
@@ -743,7 +979,7 @@ doc.text(
                 cellPadding: 2,
                 textColor: [0, 0, 0],
                 lineWidth: 0.2,
-                lineColor: [62, 118, 165],
+                lineColor: [67, 133, 246],
                 overflow: 'visible',
             },
             columnStyles: {
@@ -761,12 +997,12 @@ doc.text(
             },
             theme: 'grid',
             headStyles: {
-                fillColor: [85, 179, 194],
-                
+                fillColor: [67, 133, 246],
+
                 textColor: [255, 255, 255],
                 fontStyle: 'bold',
             },
-            tableLineColor: [62, 118, 165],
+            tableLineColor: [67, 133, 246],
             tableLineWidth: 0.2,
             margin: { left: sideMargin, right: sideMargin, bottom: 20 },
             didParseCell: function (data) {
@@ -787,15 +1023,15 @@ doc.text(
         if (generate_report_type == 'CONFIDENTIAL BACKGROUND SCREENING REPORT') {
             headerTableData = [
                 ["REFERENCE ID", String(applicationInfo.application_id).toUpperCase(), "DATE OF BIRTH", formatDate(applicationInfo.dob) || "N/A"],
-                ["EMPLOYEE ID", String(applicationInfo.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(applicationInfo.first_insuff_reopened_date) || "N/A"],
+                ["EMPLOYEE ID", String(applicationInfo.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(applicationInfo.first_insuff_reopened_date, true) || "N/A"],
                 ["VERIFICATION INITIATED", formatDate(applicationInfo.initiation_date).toUpperCase() || "N/A", "FINAL REPORT DATE", formatDate(applicationInfo.report_date) || "N/A"],
-                ["VERIFICATION PURPOSE", (applicationInfo.verification_purpose || "EMPLOYMENT").toUpperCase(), "VERIFICATION STATUS", (applicationInfo.final_verification_status || "N/A").toUpperCase()],
+                // ["VERIFICATION PURPOSE", (applicationInfo.verification_purpose || "EMPLOYMENT").toUpperCase(), "VERIFICATION STATUS", (applicationInfo.final_verification_status || "N/A").toUpperCase()],
                 ["REPORT TYPE", (applicationInfo.report_type || "EMPLOYMENT").replace(/_/g, " ").toUpperCase(), "REPORT STATUS", (applicationInfo.report_status || "N/A").toUpperCase()]
             ];
         } else if (generate_report_type == 'VENDOR CONFIDENTIAL SCREENING REPORT') {
             headerTableData = [
-                ["REFERENCE ID", String(applicationInfo.application_id).toUpperCase(), "INCORPORATED DATE", formatDate(applicationInfo.dob) || "N/A"],
-                ["EMPLOYEE ID", String(applicationInfo.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(applicationInfo.first_insuff_reopened_date) || "N/A"],
+                ["REFERENCE ID", String(applicationInfo.application_id).toUpperCase(), "DATE OF INCORPORATION", formatDate(applicationInfo.dob) || "N/A"],
+                ["EMPLOYEE ID", String(applicationInfo.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(applicationInfo.first_insuff_reopened_date, true) || "N/A"],
                 ["VERIFICATION INITIATED", formatDate(applicationInfo.initiation_date).toUpperCase() || "N/A", "FINAL REPORT DATE", formatDate(applicationInfo.report_date) || "N/A"],
                 // This row has only 2 cells (spans full row)
                 ["VERIFICATION STATUS", (applicationInfo.final_verification_status || "N/A").toUpperCase(), "REPORT STATUS", (applicationInfo.report_status || "N/A").toUpperCase()],
@@ -843,18 +1079,19 @@ doc.text(
                 cellPadding: 2,
                 textColor: [0, 0, 0],
                 lineWidth: 0.2,
-                lineColor: [0, 140, 163],
+                lineColor: [67, 133, 246],
             },
             theme: 'grid',
             headStyles: {
-                fillColor: [62, 118, 165],
+                fillColor: [67, 133, 246],
                 textColor: [255, 255, 255],
                 fontStyle: 'bold',
             },
-            tableLineColor: [62, 118, 165],
+            tableLineColor: [67, 133, 246],
             tableLineWidth: 0.2,
             margin: { left: sideMargin, right: sideMargin, bottom: 20 }
         });
+
         // === Calculate finalY after tables ===
         const { finalY } = doc.lastAutoTable || { finalY: 10 };
 
@@ -864,41 +1101,49 @@ doc.text(
         const imageRowY = ysPosition; // Push it down a bit after table
 
         // === Draw background rectangle for image row ===
-        doc.setFillColor(85, 179, 194);
-        
-        doc.rect(10, imageRowY, pageWidth - 20, imageRowHeight, 'F');
-
+        doc.setFillColor(67, 133, 246);
         // === Load and place image icons with custom sizes ===
         const images = [
-            { src: aadhaarIcon, width: 16, height: 11 }, // +5 width
+            { src: aadhaarIcon, width: 12, height: 10 }, // +5 width
             { src: emblemIcon, width: 9, height: 11 },
             { src: logo3, width: 12, height: 11 },
-            { src: logo4, width: 11, height: 11 },
+            { src: logo4, width: 12, height: 13 },
             { src: logo5, width: 13, height: 11 },
             { src: logo6, width: 11, height: 11 },
-            { src: logo8, width: 13, height: 12 },
-            { src: logo9, width: 11, height: 11 },
-            // Add more with custom sizes if needed
-        ];
+            { src: logo8, width: 13, height: 14 },
+            { src: logo9, width: 12, height: 13 },
 
-        const gap = 10;       // Spacing between icons
-        const startX = 19;    // Starting x position
+        ];
+        const gap = 12.3; // spacing between circles
+        const startX = 10;
         let currentX = startX;
-        const iconY = imageRowY + (imageRowHeight - 11) / 2; // Vertically center assuming max height = 11
+        const circleRadius = 10; // adjust based on max img size
+        const iconY = imageRowY + imageRowHeight / 2; // vertical center
 
         images.forEach((img) => {
-            doc.addImage(img.src, 'PNG', currentX, iconY, img.width, img.height);
-            currentX += img.width + gap;
-        });
+            const centerX = currentX + circleRadius;
+            const centerY = iconY + 4;
 
-        const afterImageBoxY = imageRowY + imageRowHeight + 5; // Add 10 for some spacing
+            // Draw white filled circle with black border
+            doc.setFillColor(255, 255, 255);   // white fill
+            doc.setDrawColor(67, 133, 246);         // black border
+            doc.circle(centerX, centerY, circleRadius, "FD"); // Fill + Draw
+
+            // Place the image inside (centered in circle)
+            const imgX = centerX - img.width / 2;
+            const imgY = centerY - img.height / 2;
+            doc.addImage(img.src, "PNG", imgX, imgY, img.width, img.height);
+
+            currentX += circleRadius * 1.2 + gap; // move to next circle
+        });
+        const afterImageBoxY = imageRowY + imageRowHeight + 10; // Add 10 for some spacing
 
 
 
         const imageArray = [colored, yellowShield, orangeShield, greenShield];
 
         doc.autoTable({
-            startY: afterImageBoxY,
+            startY: afterImageBoxY + 3,
             head: [
                 [
                     {
@@ -909,8 +1154,8 @@ doc.text(
                             fontSize: 11,
                             font: "TimesNewRomanBold",
                             fontStyle: 'bold',
-                            textColor: [0, 0, 0],
-                            fillColor: [85, 179, 194],
+                            textColor: [255],
+                            fillColor: [67, 133, 246],
                         }
                     }
                 ],
@@ -946,7 +1191,7 @@ doc.text(
                 lineWidth: 0.2,
                 textColor: [0, 0, 0],
                 fontStyle: 'bold',
-                lineColor: [62, 118, 165],
+                lineColor: [67, 133, 246],
             },
             headStyles: {
                 textColor: [0, 0, 0],
@@ -962,17 +1207,17 @@ doc.text(
         doc.addPage();
         let newYPosition = 5;
         const SummaryTitle = "SUMMARY OF THE VERIFICATION CONDUCTED";
-        const backgroundColor = '#55B3C2';
+        const backgroundColor = (67, 133, 246);
         const borderColor = '#3d75a6';
         const xsPosition = 10;
-
+        doc.setTextColor(255);
         const fullWidth = pageWidth - 20;
         const rectHeight = 13;
 
         // Set background color and border for the rectangle
-        doc.setFillColor(85, 179, 194);
-        doc.setDrawColor(62, 118, 165);
-          doc.setLineWidth(0.4);
+        doc.setFillColor(67, 133, 246);
+        doc.setDrawColor(46, 93, 172);
+        doc.setLineWidth(0.4);
         doc.rect(xsPosition, newYPosition + 10, fullWidth, rectHeight, 'FD');
 
 
@@ -1044,7 +1289,6 @@ doc.text(
             ],
             body: servicesData
                 .filter(service => service?.annexureData?.status) // Filter out rows with no status
-                .slice(0, 10)
                 .map(service => {
                     const colorMapping = {
                         Yellow: 'yellow',
@@ -1153,7 +1397,7 @@ doc.text(
                 halign: 'center',
                 valign: 'middle',
                 lineWidth: 0.2,
-                lineColor: [62, 118, 165],
+                lineColor: [67, 133, 246],
                 textColor: [0, 0, 0],
             },
             theme: 'grid',
@@ -1165,11 +1409,11 @@ doc.text(
                 halign: 'center',
                 valign: 'middle',
             },
-            tableLineColor: [62, 118, 165],
+            tableLineColor: [67, 133, 246],
             tableLineWidth: 0.2,
             font: "TimesNewRoman",
             textColor: [0, 0, 0],
-            margin: { left: 10, right: 10 },
+            margin: { left: 10, right: 10, bottom: 25, },
             tableWidth: 'auto',
             columnStyles: {
                 0: { cellWidth: 'auto', halign: 'center' },
@@ -1181,180 +1425,6 @@ doc.text(
 
 
 
-
-
-        const remainingServices = servicesData
-            .filter(service => service?.annexureData?.status) // Filter out rows with no status value
-            .slice(10); // Get the remaining services (from 11 onwards)
-
-        if (remainingServices.length > 0) {
-            // console.log('remainingServices', remainingServices)
-            doc.autoTable({
-                head: [
-                    [
-                        {
-                            content: 'SCOPE OF SERVICES / COMPONENT',
-                            styles: {
-                                font: "TimesNewRoman",
-                                halign: 'center',
-                                valign: 'middle',
-                                fontStyle: 'bold',
-                                whiteSpace: 'nowrap',
-                                cellWidth: 'auto'
-                            }
-                        },
-                        {
-                            content: 'INFORMATION VERIFIED BY',
-                            styles: {
-                                font: "TimesNewRoman",
-                                halign: 'center',
-                                valign: 'middle',
-                                fontStyle: 'bold',
-                                whiteSpace: 'nowrap',
-                                cellWidth: 'auto'
-                            }
-                        },
-                        {
-                            content: 'VERIFIED DATE',
-                            styles: {
-                                font: "TimesNewRoman",
-                                halign: 'center',
-                                valign: 'middle',
-                                fontStyle: 'bold',
-                                whiteSpace: 'nowrap',
-                                cellWidth: 'auto'
-                            }
-                        },
-                        {
-                            content: 'VERIFICATION STATUS'.toUpperCase(),
-                            styles: {
-                                font: "TimesNewRoman",
-                                halign: 'center',
-                                valign: 'middle',
-                                fontStyle: 'bold',
-                                whiteSpace: 'nowrap',
-                                cellWidth: 'auto'
-                            }
-                        },
-                    ]
-                ],
-
-                body: remainingServices
-                    .filter(service => service?.annexureData?.status !== 'nil') // <-- Filter here
-                    .map(service => {
-                        const colorMapping = {
-                            Yellow: 'yellow',
-                            Red: 'red',
-                            Blue: 'blue',
-                            Green: 'green',
-                            Orange: 'orange',
-                            Pink: 'pink',
-                        };
-
-                        const notstatusContent = service?.annexureData?.status || "Not Verified";
-                        const statusContent = notstatusContent
-                            .replace(/_/g, ' ')
-                            .replace(/[^a-zA-Z0-9 ]/g, '')
-                            .replace(/\b\w/g, char => char.toUpperCase());
-
-                        let textColorr = 'black';
-                        for (let color in colorMapping) {
-                            if (statusContent.includes(color)) {
-                                textColorr = colorMapping[color];
-                            }
-                        }
-
-                        return [
-                            {
-                                content: service?.reportFormJson?.json
-                                    ? JSON.parse(service.reportFormJson.json)?.heading
-                                    : null,
-                                styles: {
-                                    fontStyle: 'bold',
-                                    halign: 'left',
-                                },
-                            },
-                            {
-                                content:
-                                    service?.annexureData &&
-                                        Object.keys(service.annexureData).find(
-                                            key =>
-                                                key.endsWith('info_source') ||
-                                                key.endsWith('information_source') ||
-                                                key.startsWith('info_source') ||
-                                                key.startsWith('information_source')
-                                        )
-                                        ? service.annexureData[
-                                        Object.keys(service.annexureData).find(
-                                            key =>
-                                                key.endsWith('info_source') ||
-                                                key.endsWith('information_source') ||
-                                                key.startsWith('info_source') ||
-                                                key.startsWith('information_source')
-                                        )
-                                        ]
-                                        : null,
-                                styles: {
-                                    fontStyle: 'bold',
-                                    halign: 'left',
-                                },
-                            },
-                            {
-                                content: service?.annexureData?.created_at
-                                    ? new Date(service.annexureData.created_at)
-                                        .toLocaleDateString('en-GB')
-                                        .replace(/\//g, '-')
-                                    : 'N/A',
-                                styles: {
-                                    fontStyle: 'bold',
-                                },
-                            },
-                            {
-                                content: formatStatus(statusContent).toUpperCase(),
-                                styles: {
-                                    font: 'TimesNewRoman',
-                                    fontStyle: 'bold',
-                                    textColor: textColorr,
-                                },
-                            },
-                        ];
-                    }),
-
-                startY: doc.previousAutoTable ? doc.previousAutoTable.finalY + 20 : 20,
-                styles: {
-                    fontSize: 9,
-                    font: "TimesNewRoman",
-                    cellPadding: 2,
-                    halign: 'center',
-                    valign: 'middle',
-                    lineWidth: 0.2,
-                    lineColor: [62, 118, 165],
-                    textColor: [0, 0, 0],
-                },
-                theme: 'grid',
-                headStyles: {
-                    fillColor: backgroundColor,
-                    textColor: [0, 0, 0],
-                    fontStyle: 'bold',
-                    font: "TimesNewRoman",
-                    halign: 'center',
-                    valign: 'middle',
-                },
-                tableLineColor: [62, 118, 165],
-                tableLineWidth: 0.2,
-                textColor: [0, 0, 0],
-                margin: { left: 10, right: 10 },
-                tableWidth: 'auto',
-                columnStyles: {
-                    0: { cellWidth: 'auto', halign: 'center' },
-                    1: { cellWidth: 'auto', halign: 'center' },
-                    2: { cellWidth: 'auto', halign: 'center' },
-                    3: { cellWidth: 'auto', halign: 'center' },
-                },
-            });
-
-
-        }
         addFooter(doc);
 
 
@@ -1430,14 +1500,7 @@ doc.text(
                             const finalValue = rawValue !== undefined ? rawValue : verified;
 
                             if (name == 'additional_fee_police_verification_pa') {
-                                console.log('data index', index, data);
-                                console.log(`--- Processing item ${index} ---`);
-                                console.log("Raw data:", data);
 
-                                console.log("data.values:", data.values);
-                                console.log("Raw Value:", rawValue);
-                                console.log("Verified:", verified);
-                                console.log("Final Value:", finalValue);
                             }
 
                             const formatDate = (dateStr) => {
@@ -1484,15 +1547,14 @@ doc.text(
                         const rectHeight = 8;
 
                         doc.setLineWidth(0.2); // Set border thickness to 0.2
-                        doc.setFillColor(85, 179, 194);
-
-                        doc.setDrawColor(62, 118, 165);
+                        doc.setFillColor(67, 133, 246);
+                        doc.setTextColor(255);
+                        doc.setDrawColor(46, 93, 172);
 
                         doc.rect(xsPosition, yPosition, pageWidth - 20, rectHeight, "FD");
 
                         doc.setFontSize(10);
-                        doc.setFont('TimesNewRomanBold');
-                        doc.setTextColor(0, 0, 0);
+                        doc.setFont('TimesNewRomanBold')
 
                         const textHeight = doc.getTextDimensions(headingText).h + 1;
                         const verticalCenter = yPosition + rectHeight / 2 + textHeight / 4;
@@ -1514,7 +1576,7 @@ doc.text(
                         };
 
                         const dynamicHead = Myheaders.map(header => ({
-                            content: header,
+                            content: changeLabel(header, generate_report_type),
                             styles: { halign: "left", fontStyle: "bold" }
                         }));
                         const isTwoColumnBody = dynamicHead.length < 3;
@@ -1533,7 +1595,7 @@ doc.text(
                                     if (isTwoColumnBody) {
                                         // Use only 2 columns in body
                                         return [
-                                            { content: row[0], styles: { halign: "left", fontStyle: "bold" } },
+                                            { content: changeLabel(row[0], generate_report_type), styles: { halign: "left", fontStyle: "bold" } },
                                             {
                                                 content: isColourCodeRow ? formatContent(row[1]).toUpperCase() : formatContent(row[1]),
                                                 styles: isColourCodeRow ? { ...getStyle(row[1], isColourCodeRow) } : {}
@@ -1543,7 +1605,7 @@ doc.text(
                                         // Normal 3-column body
                                         return row.length === 2
                                             ? [
-                                                { content: row[0], styles: { halign: "left", fontStyle: "bold" } },
+                                                { content: changeLabel(row[0], generate_report_type), styles: { halign: "left", fontStyle: "bold" } },
                                                 {
                                                     content: isColourCodeRow ? formatContent(row[1]).toUpperCase() : formatContent(row[1]),
                                                     colSpan: 2,
@@ -1551,7 +1613,7 @@ doc.text(
                                                 }
                                             ]
                                             : [
-                                                { content: row[0], styles: { halign: "left", fontStyle: "bold" } },
+                                                { content: changeLabel(row[0], generate_report_type), styles: { halign: "left", fontStyle: "bold" } },
                                                 {
                                                     content: isColourCodeRow ? formatContent(row[1]).toUpperCase() : formatContent(row[1]),
                                                     styles: isColourCodeRow ? { ...getStyle(row[1], isColourCodeRow) } : {}
@@ -1570,7 +1632,7 @@ doc.text(
                                 fontSize: 10,
                                 cellPadding: 2,
                                 lineWidth: 0.2,
-                                lineColor: [62, 118, 165]
+                                lineColor: [67, 133, 246]
                             },
                             columnStyles: isTwoColumnBody
                                 ? {
@@ -1710,7 +1772,7 @@ doc.text(
 
                                                     // Draw image box
                                                     const padding = 5;
-                                                    doc.setDrawColor(62, 118, 165);
+                                                    doc.setDrawColor(46, 93, 172);
                                                     doc.setLineWidth(0.2);
                                                     doc.rect(10, yPosition, maxBoxWidth, maxBoxHeight);
 
@@ -1785,7 +1847,7 @@ doc.text(
                                                 doc.text(text, pageWidth / 2, yPosition, { align: "center" }); // Centered text
                                                 yPosition += 5;
 
-                                                doc.setDrawColor(62, 118, 165);
+                                                doc.setDrawColor(46, 93, 172);
                                                 doc.setLineWidth(0.2);
                                                 doc.rect(10, yPosition, maxBoxWidth, maxBoxHeight);
 
@@ -1846,7 +1908,7 @@ doc.text(
 
         if (disclaimerY < 20) {
             doc.addPage();
-            doc.setFillColor(243, 251, 253);
+            doc.setFillColor(255, 255, 255);
 
             // Draw full-page background rect (before content)
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
@@ -1872,11 +1934,11 @@ doc.text(
         const disclaimerButtonTextWidth = doc.getTextWidth('DISCLAIMER :');
         const buttonTextHeight = doc.getFontSize();
         const disclaimerButtonXPosition = (doc.internal.pageSize.width - disclaimerButtonWidth) / 2;
-        doc.setDrawColor(62, 118, 165); // Border color
-        doc.setFillColor(backgroundColor); // Fill color
+        doc.setDrawColor(46, 93, 172); // Border color
+        doc.setFillColor(67, 133, 246); // Fill color
         doc.rect(disclaimerButtonXPosition, disclaimerY, disclaimerButtonWidth, disclaimerButtonHeight, 'F'); // Fill
         doc.rect(disclaimerButtonXPosition, disclaimerY, disclaimerButtonWidth, disclaimerButtonHeight, 'D'); // Border
-        doc.setTextColor(0, 0, 0); // Black text
+        doc.setTextColor(255);// Black text
         doc.setFont('TimesNewRomanBold');
 
         // Center the 'DISCLAIMER' text
@@ -1896,12 +1958,25 @@ doc.text(
 
         // Line 1
         doc.setFont("TimesNewRoman", "normal");
-        doc.text("This is a computer-generated document issued by", startXNew, yPosition);
+        // Base sentence
+        const baseText = "This is a computer-generated document issued by";
+        doc.text(baseText, startXNew, yPosition);
 
+        // Choose company name based on template
+        const customCompanyName = applicationInfo.custom_template === "yes"
+            ? applicationInfo.customer_name
+            : "Screeningstar Solutions Private Limited";
+
+        // Print company name after base sentence
         doc.setFont("TimesNewRoman", "bold");
-        doc.text("Screeningstar Solutions Private Limited", startXNew + doc.getTextWidth("This is a computer-generated document issued by"), yPosition);
+        const baseTextWidth = doc.getTextWidth(baseText);
+        doc.text(customCompanyName, startXNew + baseTextWidth, yPosition);
+
+        // Print "and does not" after the full sentence
         doc.setFont("TimesNewRoman", "normal");
-        doc.text("and does not", startXNew + doc.getTextWidth("This is a computer-generated document issued by Screeningstar Solutions Private Limited") + 7, yPosition);
+        const fullLineWidth = baseTextWidth + doc.getTextWidth(customCompanyName) + 7;
+        doc.text("and does not", startXNew + fullLineWidth, yPosition);
+
 
         doc.setFont("TimesNewRoman", "normal");
         yPosition += 6;
@@ -1981,31 +2056,66 @@ doc.text(
 
         yPosition += 8;
         doc.text("For queries or customizations, please contact:", startXNew, yPosition);
-        let anchorText = "compliance@screeningstar.com";
-        let bgvEmail = "bgv@screeningstar.com";
-
-        if (applicationInfo.custom_template == "yes") {
-            anchorText = modifiedNames[0] || anchorText;
-            bgvEmail = modifiedNames[1] || bgvEmail;
-        } else {
-            anchorText = "compliance@screeningstar.com";
-            bgvEmail = "bgv@screeningstar.com";
+        // Example: disclaimer_emails = ["email1@example.com", "email2@example.com"]
+        let disclaimer_emails = [];
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
         }
+
+        if (applicationInfo.custom_template === "yes") {
+            if (applicationInfo.disclaimer_emails && typeof applicationInfo.disclaimer_emails === "string") {
+                disclaimer_emails = applicationInfo.disclaimer_emails
+                    .split(",")                              // Split by comma
+                    .map(email => email.trim())              // Trim each email
+                    .filter(email => validateEmail(email));  // Keep only valid emails
+            } else {
+                disclaimer_emails = []; // Or a default list if needed
+            }
+        } else {
+            disclaimer_emails = [
+                "compliance@screeningstar.com",
+                "bgv@screeningstar.com"
+            ];
+        }
+
         yPosition += 10;
+        let currentDisclaimerX = startXNew;
 
+        disclaimer_emails.forEach((email, index) => {
+            // Show icon before the second email (index === 1)
+            if (index === 0 && emailIconGreen) {
+                doc.addImage(emailIconGreen, 'PNG', currentDisclaimerX, yPosition - 4, 5, 5);
+                currentDisclaimerX += 7; // Add space after the icon
+            }
 
-        // Email 1 - green envelope + blue text
-        doc.addImage(emailIconGreen, 'PNG', startXNew, yPosition - 4, 5, 5); // Optional icon
-        doc.setTextColor(0, 0, 255);
-        doc.text(anchorText, startXNew + 7, yPosition);
+            // Add separator before emails with index > 0
+            if (index > 0) {
+                const separator = " | ";
+                doc.setTextColor(0, 0, 255);
+                doc.text(separator, currentDisclaimerX, yPosition);
+                currentDisclaimerX += doc.getTextWidth(separator);
+            }
 
-        // Email 2 - next to the first
-        doc.text("| " + bgvEmail, startXNew + 7 + doc.getTextWidth(anchorText + " "), yPosition);
-        doc.setTextColor(0, 0, 0); // Reset text color for anything that follows
+            // Draw the email text
+            doc.setTextColor(0, 0, 255);
+            doc.text(email, currentDisclaimerX, yPosition);
+            currentDisclaimerX += doc.getTextWidth(email + " ");
+        });
+
+        // Reset color after emails
+        doc.setTextColor(0, 0, 0);
 
         // Update Company Details Y (aligned with the same paragraph block)
         let companyDetailsY = yPosition + disclaimerTextTopMargin - 4;
         let endOfDetailY = companyDetailsY + 10;
+        const sealImage = '/risk-free.png';
+        const imgWidth = 40;
+        const imgHeight = 40;
+        const centerXNew = (pageWidth - imgWidth) / 2;
+
+        // doc.addImage(sealImage, "PNG", centerXNew, endOfDetailY, imgWidth, imgHeight);
+
 
         if (endOfDetailY + disclaimerButtonHeight > doc.internal.pageSize.height - 20) {
             doc.addPage();
@@ -2131,6 +2241,62 @@ doc.text(
         setApiLoading(false)
         setLoadingIndex(null);
     };
+    useEffect(() => {
+        const fetchHeadingsAndStatuses = async () => {
+            if (!Array.isArray(data) || data.length === 0) return;
+
+            const applicationInfo = data[0]; // You can change this logic if needed
+
+            if (!applicationInfo?.main_id || !applicationInfo?.services) return;
+
+            try {
+                const servicesData = await fetchServicesData(applicationInfo.main_id, applicationInfo.services);
+                if (!Array.isArray(servicesData)) return;
+
+                const headings = [];
+
+                servicesData.forEach((service) => {
+                    const rawJson = service?.reportFormJson?.json;
+                    if (!rawJson || rawJson === "null") return;
+
+                    let parsedJson;
+                    try {
+                        parsedJson = JSON.parse(rawJson);
+                    } catch (err) {
+                        console.warn("Invalid JSON found in reportFormJson:", rawJson);
+                        return;
+                    }
+
+                    const heading = parsedJson?.heading?.trim();
+                    if (!heading || heading.toLowerCase() === "null") return;
+
+                    let status = service?.annexureData?.status?.trim();
+
+                    // Handle empty, null or "null" status
+                    if (!status || status.toLowerCase() === "null") {
+                        status = "INITIATED";
+                    } else if (status.length < 4) {
+                        // Format short statuses
+                        status = status.replace(/[^a-zA-Z0-9\s]/g, " ").toUpperCase() || "N/A";
+                    } else {
+                        // Format longer statuses (e.g. "completed" -> "Completed")
+                        status = status
+                            .replace(/[^a-zA-Z0-9\s]/g, " ")
+                            .toLowerCase()
+                            .replace(/\b\w/g, (char) => char.toUpperCase()) || "N/A";
+                    }
+
+                    headings.push({ heading, status });
+                });
+
+                setHeadingsAndStatuses(headings);
+            } catch (err) {
+                console.error("Error fetching headings and statuses:", err);
+            }
+        };
+
+        fetchHeadingsAndStatuses();
+    }, [data]);
 
 
     const handleCheckboxChange = (id, isDownloadable) => {
@@ -2253,10 +2419,24 @@ doc.text(
     };
 
     // Function to format the date to "Month Day, Year" format
-    const formatDate = (date) => {
-        if (!date) return "NOT APPLICABLE"; // Check for null, undefined, or empty
+    const formatDate = (date, isInsuff = false) => {
+        if (!date) {
+            if (isInsuff) {
+                return "No Insuff"; // Check for null, undefined, or empty
+            } else {
+                return "N/A";
+            }
+        }
+
         const dateObj = new Date(date);
-        if (isNaN(dateObj.getTime())) return "Nill"; // Check for invalid date
+        if (isNaN(dateObj.getTime())) {
+            if (isInsuff) {
+                return "N/A"; // Check for null, undefined, or empty
+            } else {
+                return "N/A";
+            }
+        }
+
         const day = String(dateObj.getDate()).padStart(2, '0');
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const year = dateObj.getFullYear();
@@ -2608,7 +2788,7 @@ doc.text(
         return acc;
     }, {});
     const formatedJson = (delayReason) => {
-        if (!delayReason) return ""; // Handle empty, null, or undefined inputs
+        if (!delayReason) return "No Insuff"; // Handle empty, null, or undefined inputs
         return delayReason
             // Remove backslashes
             .replace(/\\+/g, "")
@@ -2638,12 +2818,18 @@ doc.text(
     const modifiedNames = customerEmails.map(name =>
         name[0] + name.slice(2)
     );
+    useEffect(() => {
+        if (tableScrollRef.current) {
+            setScrollWidth(tableScrollRef.current.scrollWidth + "px");
+        }
+    }, [paginatedData, loading]);
+
+
     const removeColorNames = (text) => {
         const colorRegex = new RegExp(`\\b(${colorNames.join('|')})\\b`, 'gi');
         return text.replace(colorRegex, '').trim();
     };
-    console.log('filteredData name', filteredData);
-    console.log('selectedRows    name', selectedRows);
+    console.log('paginatedData    name', paginatedData);
 
     return (
         <div className="bg-[#c1dff2] border border-black">
@@ -2663,12 +2849,14 @@ doc.text(
 
                 <div className='md:flex justify-between items-baseline mb-6 '>
                     <div className=" text-left">
-                        <div className='flex items-center gap-5'>   <button
-                            className="bg-green-500 hover:scale-105  hover:bg-green-600 text-white px-6 py-2 rounded"
-                            onClick={handleExportToExcel}
-                        >
-                            Export to Excel
-                        </button>
+                        <div className='flex items-center gap-5'>
+                            <button
+                                className="bg-green-500 hover:scale-105  hover:bg-green-600 text-white px-6 py-2 rounded"
+                                onClick={handleExportToExcel}
+                            >
+                                Export to Excel
+                            </button>
+
                             {selectedRows.length > 0 &&
                                 filteredData.filter(
                                     (data) =>
@@ -2722,7 +2910,7 @@ doc.text(
                                 >
                                     {selectedValue ? (
                                         <>
-                                            {selectedValue.replace(/count/gi, '').charAt(0).toUpperCase() + selectedValue.replace(/count/gi, '').slice(1)}
+                                            {changeLabelStatus(selectedValue)}
                                         </>
                                     ) : (
                                         "Select Status"
@@ -2749,21 +2937,25 @@ doc.text(
                                                 </div>
 
                                                 {/* Dropdown Options */}
-                                                {filteredDropdownData.map((item) => (
-                                                    <div
-                                                        key={item.status}
-                                                        className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedValue === item.status ? "bg-gray-200" : ""
-                                                            }`}
-                                                        onClick={() => {
-                                                            setSelectedValue(item.status);
-                                                            fetchData(item.status);
-                                                            setCurrentPage(1)
-                                                            setShowDropdown(false);
-                                                        }}
-                                                    >
-                                                        {`${item.status.replace(/\bcount\b/gi, '').trim().charAt(0).toUpperCase() + item.status.replace(/\bcount\b/gi, '').trim().slice(1)} (${item.count})`}
-                                                    </div>
-                                                ))}
+                                                {filteredDropdownData
+                                                    .filter((item) => item.status !== "previous completed count")
+                                                    .map((item) => (
+                                                        <div
+                                                            key={item.status}
+                                                            className={`p-2 hover:bg-gray-100 uppercase cursor-pointer ${selectedValue === item.status ? "bg-gray-200" : ""
+                                                                }`}
+                                                            onClick={() => {
+                                                                setSelectedValue(item.status);
+                                                                fetchData(item.status);
+                                                                setCurrentPage(1);
+                                                                setShowDropdown(false);
+                                                            }}
+                                                        >
+                                                            {changeLabelStatus(item.status)}
+                                                        </div>
+                                                    )) || (
+                                                        <div className="p-2 text-gray-500">No results found</div>
+                                                    )}
                                             </>
                                         ) : (
                                             <div className="p-2 text-gray-500">No results found</div>
@@ -2783,369 +2975,364 @@ doc.text(
 
                     </div>
                 </div>
+                <div className="table-container rounded-lg">
+                    {/* Top Scroll */}
+                    <div className="top-scroll" ref={topScrollRef} onScroll={syncScroll}>
+                        <div className="top-scroll-inner" style={{ width: scrollWidth }} />
+                    </div>
 
-                <div className="rounded-lg overflow-scroll " ref={scrollContainerRef}>
-                    <table className="min-w-full border-collapse border border-black overflow-scroll rounded-lg whitespace-nowrap">
-                        <thead className='rounded-lg'>
-                            <tr className="bg-[#c1dff2] text-[#4d606b]">
-                                <th className="border border-black px-4 py-2">
-                                    <input
-                                        type="checkbox"
-                                        className="w-5 h-5"
-                                        checked={
-                                            selectedRows.length > 0 &&
-                                            filteredData.find((data) => selectedRows.includes(data.id))
-                                        }
-                                        onChange={handleSelectAll}
-                                    />
-
-
-                                </th>
-
-                                <th className="uppercase border border-black px-4 py-2">SL NO</th>
-                                <th className="uppercase border border-black px-4 py-2">TAT Days</th>
-                                <th className="uppercase border border-black px-4 py-2">Location</th>
-                                <th className="uppercase border border-black px-4 py-2">Name Of APPLICANT</th>
-                                <th className="uppercase border border-black px-4 py-2">Sub Client</th>
-                                <th className="uppercase border border-black px-4 py-2">Reference Id</th>
-                                <th className="uppercase border border-black px-4 py-2">Check Id</th>
-                                <th className="uppercase border border-black px-4 py-2">Ticket Id</th>
-
-                                <th className="uppercase border border-black px-4 py-2">Photo</th>
-                                <th className="uppercase border border-black px-4 py-2">Employee Id</th>
-                                <th className="uppercase border border-black px-4 py-2">Initiation Date</th>
-                                <th className="uppercase border border-black px-4 py-2">Deadline Date</th>
-                                <th className="uppercase border border-black px-4 py-2">Report Data</th>
-                                <th className="uppercase border border-black px-4 py-2">Download Status</th>
-                                <th className="uppercase border border-black px-4 py-2">View More</th>
-                                <th className="uppercase border border-black px-4 py-2">Overall Status</th>
-                                <th className="uppercase border border-black px-4 py-2">Report Type</th>
-                                <th className="uppercase border border-black px-4 py-2">Report Date</th>
-                                <th className="uppercase border border-black px-4 py-2">Report Generated By</th>
-                                <th className="uppercase border border-black px-4 py-2">QC Done By</th>
-                                <th className="uppercase border border-black px-4 py-2 " colSpan={1}>Action</th>
-                                <th className="uppercase border border-black px-4 py-2">Completed IN</th>
-                                <th className="uppercase border border-black px-4 py-2">Days Delayed</th>
-                                <th className="uppercase border border-black px-4 py-2 ">HIGHLIGHT</th>
+                    {/* Actual Table Scroll */}
+                    <div className="table-scroll rounded-lg" ref={tableScrollRef} onScroll={syncScroll}>
+                        <table className="min-w-full border-collapse border border-black overflow-scroll rounded-lg whitespace-nowrap">
+                            <thead className='rounded-lg'>
+                                <tr className="bg-[#c1dff2] text-[#4d606b]">
+                                    <th className="border border-black px-4 py-2">
+                                        <input
+                                            type="checkbox"
+                                            className="w-5 h-5"
+                                            checked={
+                                                selectedRows.length > 0 &&
+                                                filteredData.find((data) => selectedRows.includes(data.id))
+                                            }
+                                            onChange={handleSelectAll}
+                                        />
 
 
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
+                                    </th>
 
-                                <tr>
-                                    <td colSpan={17} className="py-4 text-center text-gray-500">
-                                        <Loader className="text-center" />
-                                    </td>
+                                    <th className="uppercase border border-black px-4 py-2">SL NO</th>
+                                    <th className="uppercase border border-black px-4 py-2">TAT Days</th>
+                                    <th className="uppercase border border-black px-4 py-2">Location</th>
+                                    <th className="uppercase border border-black px-4 py-2">Name Of APPLICANT</th>
+                                    <th className="uppercase border border-black px-4 py-2">Sub Client</th>
+                                    <th className="uppercase border border-black px-4 py-2">Reference Id</th>
+                                    <th className="uppercase border border-black px-4 py-2">Check Id</th>
+                                    <th className="uppercase border border-black px-4 py-2">Ticket Id</th>
+
+                                    <th className="uppercase border border-black px-4 py-2">Photo</th>
+                                    <th className="uppercase border border-black px-4 py-2">Employee Id</th>
+                                    <th className="uppercase border border-black px-4 py-2">
+                                        <button
+                                            className="bg-orange-500 hover:scale-105  hover:bg-orange-600 text-white px-6 py-2 rounded"
+                                            onClick={() => setViewServices(prev => !prev)}
+
+                                        >
+                                            {viewServices ? "Hide Services" : "View Services"}
+                                        </button><br />
+                                        Initiation Date</th>
+                                    {viewServices && servicesHeadings && servicesHeadings.length > 0 ? (
+                                        servicesHeadings.map((heading, index) => {
+                                            return (
+                                                <th key={index} className="uppercase border border-black px-4 py-2">
+                                                    {heading.heading}
+                                                </th>
+                                            );
+                                        })
+                                    ) : null}
+                                    <th className="uppercase border border-black px-4 py-2">Deadline Date</th>
+                                    <th className="uppercase border border-black px-4 py-2">Report Data</th>
+                                    <th className="uppercase border border-black px-4 py-2">Download Status</th>
+
+                                    <th className="uppercase border border-black px-4 py-2">Overall Status</th>
+                                    <th className="uppercase border border-black px-4 py-2">Report Type</th>
+                                    <th className="uppercase border border-black px-4 py-2">Report Date</th>
+                                    <th className="uppercase border border-black px-4 py-2">Report Generated By</th>
+                                    <th className="uppercase border border-black px-4 py-2">QC Done By</th>
+                                    <th className="uppercase border border-black px-4 py-2 " colSpan={1}>Action</th>
+                                    <th className="uppercase border border-black px-4 py-2">Completed IN</th>
+                                    <th className="uppercase border border-black px-4 py-2">Days Delayed</th>
+                                    <th className="uppercase border border-black px-4 py-2 ">HIGHLIGHT</th>
+
+                                    {/* {headingsAndStatuses.map((item, idx) => {
+                                    const rawHeading = item?.heading;
+
+                                    const isEmpty =
+                                        !rawHeading ||
+                                        rawHeading.trim() === '' ||
+                                        rawHeading.trim().toLowerCase() === 'null';
+
+                                    return (
+                                        <th
+                                            key={`heading-${idx}`}
+                                            className="text-left p-2 border border-black capitalize bg-gray-200"
+                                        >
+                                            {isEmpty ? 'NIL' : sanitizeText(rawHeading)}
+                                        </th>
+                                    );
+                                })} */}
+
+                                    <th className="border border-black uppercase px-4 py-2">First Level Insuff</th>
+                                    <th className="border border-black uppercase px-4 py-2">First Insuff Date</th>
+                                    <th className="border border-black uppercase px-4 py-2">First Insuff Reopen</th>
+                                    <th className="border border-black uppercase px-4 py-2">Second Level Insuff</th>
+                                    <th className="border border-black uppercase px-4 py-2">Second Insuff Date</th>
+                                    <th className="border border-black uppercase px-4 py-2">Third Level Insuff</th>
+                                    <th className="border border-black uppercase px-4 py-2">Third Insuff Date</th>
+                                    <th className="border border-black uppercase px-4 py-2">Reason for Delay</th>
+
+
                                 </tr>
-                            ) : paginatedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={17} className="py-4 text-center text-gray-500">
-                                        No data available in table
-                                    </td>
-                                </tr>
-                            ) : (
-                                <>
-                                    {paginatedData.map((data, index) => {
-                                        const actualIndex = (currentPage - 1) * rowsPerPage + index;
-                                        const isDownloadable = data.id;
-                                        return (
+                            </thead>
+                            <tbody>
+                                {loading ? (
+
+                                    <tr>
+                                        <td colSpan={17} className="py-4 text-center text-gray-500">
+                                            <Loader className="text-center" />
+                                        </td>
+                                    </tr>
+                                ) : paginatedData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={17} className="py-4 text-center text-gray-500">
+                                            No data available in table
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    <>
+                                        {paginatedData.map((data, index) => {
+                                            const actualIndex = (currentPage - 1) * rowsPerPage + index;
+                                            const isDownloadable = data.id;
+                                            const isExpanded = expandedRow && expandedRow.index === index;
+                                            return (
 
 
-                                            <React.Fragment key={data.id}>
-                                                <tr
-                                                    className={`text-center ${data.is_highlight === 1 ? 'highlight' : ''}`}
-                                                    style={{
-                                                        borderColor: data.is_highlight === 1 ? 'yellow' : 'transparent',
-                                                    }}
-                                                >
-                                                    <td className="border border-black px-4 py-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            className='w-5 h-5'
-                                                            checked={selectedRows.includes(data.id)}
-                                                            onChange={() => handleCheckboxChange(data.id, isDownloadable)}
-                                                            disabled={!isDownloadable}
-                                                        />
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">                        {index + 1 + (currentPage - 1) * rowsPerPage}</td>
-                                                    <td className="border border-black px-4 py-2">{adminTAT || 'NIL'}</td>
-                                                    <td className="border border-black px-4 py-2">{data.location || 'NIL'}</td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        {data.name || companyName || 'NIL'}
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">{data.sub_client || 'NIL'}</td>
-                                                    <td className="border border-black px-4 py-2">{data.application_id || 'NIL'}</td>
-                                                    <td className="border border-black px-4 py-2">{data.check_id || 'NIL'}</td>  <td className="border border-black px-4 py-2">{data.ticket_id || 'NIL'}</td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        <div className='flex justify-center items-center'>
-                                                            <img src={data.photo ? data.photo : `${Default}`}
-                                                                alt={data.name} className="w-10 h-10 rounded-full" />
-                                                        </div>
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">{data.employee_id || 'NIL'}</td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        {data.initiation_date
-                                                            ? new Date(data.initiation_date).toLocaleDateString('en-GB').replace(/\//g, '-')
-                                                            : 'NIL'}
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        {data.deadline_date
-                                                            ? new Date(data.deadline_date).toLocaleDateString('en-GB').replace(/\//g, '-')
-                                                            : 'NIL'}
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        <button
-                                                            className="  border border-[#073d88] text-[#073d88] px-4 py-2 rounded hover:bg-[#073d88] hover:text-white"
-                                                            onClick={() => handleUpload(data.id, data.branch_id)}
-                                                        >
-                                                            Generate Report
-                                                        </button>
-                                                    </td>
+                                                <React.Fragment key={data.id}>
+                                                    <tr
+                                                        className={`text-center  ${isExpanded ? "bg-gray-100" : "" // selected row bg gray
+                                                            }  ${data.is_highlight === 1 ? 'highlight' : ''}`}
+                                                        style={{
+                                                            borderColor: data.is_highlight === 1 ? 'yellow' : 'transparent',
+                                                        }}
+                                                    >
+                                                        <td className="border border-black px-4 py-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                className='w-5 h-5'
+                                                                checked={selectedRows.includes(data.id)}
+                                                                onChange={() => handleCheckboxChange(data.id, isDownloadable)}
+                                                                disabled={!isDownloadable}
+                                                            />
+                                                        </td>
+                                                        <td className="border border-black px-4 py-2">                        {index + 1 + (currentPage - 1) * rowsPerPage}</td>
+                                                        <td className="border border-black px-4 py-2">{adminTAT || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">{data.location || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            {data.name || companyName || 'NIL'}
+                                                        </td>
+                                                        <td className="border border-black px-4 py-2">{data.sub_client || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">{data.application_id || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">{data.check_id || 'NIL'}</td>  <td className="border border-black px-4 py-2">{data.ticket_id || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            <div className='flex justify-center items-center'>
+                                                                <img src={data.photo ? data.photo : `${Default}`}
+                                                                    alt={data.name} className="w-10 h-10 rounded-full" />
+                                                            </div>
+                                                        </td>
+                                                        <td className="border border-black px-4 py-2">{data.employee_id || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            {data.initiation_date
+                                                                ? new Date(data.initiation_date).toLocaleDateString('en-GB').replace(/\//g, '-')
+                                                                : 'NIL'}
+                                                        </td>
+                                                        {viewServices && servicesHeadings && servicesHeadings.length > 0 ? (
+                                                            servicesHeadings.map((heading, index) => {
+                                                                return (
+                                                                    <th key={index} className="uppercase font-normal border border-black px-4 py-2">
+                                                                        {getStatusByServiceId(data.annexureResults, heading.id)}
+                                                                    </th>
+                                                                );
+                                                            })
+                                                        ) : null}
+                                                        <td className="border border-black px-4 py-2">
+                                                            {data.deadline_date
+                                                                ? new Date(data.deadline_date).toLocaleDateString('en-GB').replace(/\//g, '-')
+                                                                : 'NIL'}
+                                                        </td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            <button
+                                                                className="  border border-[#073d88] text-[#073d88] px-4 py-2 rounded hover:bg-[#073d88] hover:text-white"
+                                                                onClick={() => handleUpload(data.id, data.branch_id)}
+                                                            >
+                                                                Generate Report
+                                                            </button>
+                                                        </td>
 
-                                                    <td className="border border-black px-4 py-2">
-                                                        {(() => {
-                                                            let buttonText = "";
-                                                            let buttonDisabled = false;
+                                                        <td className="border border-black px-4 py-2">
+                                                            {(() => {
+                                                                let buttonText = "";
+                                                                let buttonDisabled = false;
 
-                                                            if (data.overall_status === "completed") {
-                                                                if (data.is_verify === "yes") {
-                                                                    buttonText = "DOWNLOAD";
+                                                                if (data.overall_status === "completed") {
+                                                                    if (data.is_verify === "yes") {
+                                                                        buttonText = "DOWNLOAD";
+                                                                    } else {
+                                                                        buttonText = "QC Pending";
+                                                                    }
+                                                                } else if (data.overall_status === "wip") {
+                                                                    buttonText = "WIP";
+                                                                    buttonDisabled = true;
+
                                                                 } else {
-                                                                    buttonText = "QC Pending";
+                                                                    buttonText = "NOT READY";
+                                                                    buttonDisabled = true;
                                                                 }
-                                                            } else if (data.overall_status === "wip") {
-                                                                buttonText = "WIP";
-                                                            } else {
-                                                                buttonText = "NOT READY";
-                                                                buttonDisabled = true;
+
+                                                                return buttonDisabled ? (
+                                                                    <button
+                                                                        className="text-white px-4 py-2 rounded cursor-not-allowed bg-gray-500"
+                                                                        disabled
+                                                                    >
+                                                                        {buttonText}
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleDownload(actualIndex, data)}
+                                                                        disabled={downloadingIndex === actualIndex}
+                                                                        className={`${buttonText === "DOWNLOAD"
+                                                                            ? ""
+                                                                            : buttonText === "QC Pending"
+                                                                                ? "text-[#00aeee]"
+                                                                                : "bg-green-500 hover:bg-green-300 text-white"
+                                                                            } ${buttonText !== "DOWNLOAD" ? "px-4 py-2" : ""
+                                                                            } hover:scale-105 uppercase border border-white rounded ${downloadingIndex === actualIndex ? "opacity-50 cursor-not-allowed" : ""
+                                                                            }`}
+                                                                        style={{
+                                                                            backgroundColor: buttonText === "QC Pending" ? "transparent" : undefined,
+                                                                        }}
+                                                                    >
+                                                                        {downloadingIndex === actualIndex ? (
+                                                                            <span className="flex items-center gap-2">
+                                                                                <svg
+                                                                                    className="animate-spin h-5 w-5 text-white hover:text-green-500"
+                                                                                    viewBox="0 0 24 24"
+                                                                                    fill="none"
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                >
+                                                                                    <circle
+                                                                                        className="opacity-25"
+                                                                                        cx="12"
+                                                                                        cy="12"
+                                                                                        r="10"
+                                                                                        stroke="currentColor"
+                                                                                        strokeWidth="4"
+                                                                                    ></circle>
+                                                                                    <path
+                                                                                        className="opacity-75"
+                                                                                        fill="currentColor"
+                                                                                        d="M4 12a8 8 0 018-8v8H4z"
+                                                                                    ></path>
+                                                                                </svg>
+                                                                                Downloading...
+                                                                            </span>
+                                                                        ) : buttonText === "DOWNLOAD" ? (
+                                                                            <img
+                                                                                src={pdfIcon}
+                                                                                alt="Download PDF"
+                                                                                className="w-12 h-12 object-contain"
+                                                                            />
+                                                                        ) : (
+                                                                            buttonText
+                                                                        )}
+                                                                    </button>
+                                                                );
+                                                            })()}
+                                                        </td>
+
+                                                        <td className="border border-black px-4 uppercase py-2">{(data.overall_status || 'WIP').replace(/_/g, ' ')}
+                                                        </td>
+                                                        <td className="border border-black px-4 uppercase py-2">{data.report_type?.replace(/_/g, " ") || 'N/A'}</td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            {
+                                                                data.report_type === 'final_report'
+                                                                    ? data.report_date
+                                                                        ? new Date(data.report_date).toLocaleDateString('en-GB').replace(/\//g, '-')
+                                                                        : 'NIL'
+                                                                    : 'NIL'
                                                             }
 
-                                                            return buttonDisabled ? (
-                                                                <button
-                                                                    className="text-white px-4 py-2 rounded cursor-not-allowed bg-gray-500"
-                                                                    disabled
-                                                                >
-                                                                    {buttonText}
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => handleDownload(actualIndex, data)}
-                                                                    disabled={downloadingIndex === actualIndex}
-                                                                    className={`${buttonText === "DOWNLOAD"
-                                                                        ? ""
-                                                                        : buttonText === "QC Pending"
-                                                                            ? "text-[#00aeee]"
-                                                                            : "bg-green-500 hover:bg-green-300 text-white"
-                                                                        } ${buttonText !== "DOWNLOAD" ? "px-4 py-2" : ""
-                                                                        } hover:scale-105 uppercase border border-white rounded ${downloadingIndex === actualIndex ? "opacity-50 cursor-not-allowed" : ""
-                                                                        }`}
+                                                        </td>
+
+                                                        <td className="border border-black px-4 py-2">{data.report_generated_by_name || 'N/A'}</td>
+                                                        <td className="border border-black px-4 py-2">{data.qc_done_by_name || 'N/A'}</td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            <button
+                                                                className={`text-white rounded px-4 py-2 bg-red-500 hover:bg-red-600 ${deleteLoading === data.main_id ? 'opacity-50 cursor-not-allowed' : ''
+                                                                    }`}
+                                                                onClick={() => handleApplicationDelete(data.main_id)}
+                                                                disabled={deleteLoading === data.main_id}
+                                                            >
+
+                                                                {deleteLoading === data.main_id ? ' Deleting...' : ' Delete'}
+                                                            </button>
+
+                                                        </td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            {(data.report_completed_status?.status === 'early' || data.report_completed_status?.status === 'on_time')
+                                                                ? data.report_completed_status?.used ?? 'NIL'
+                                                                : 'NIL'}
+                                                        </td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            {data.report_completed_status?.status === 'exceed'
+                                                                ? data.report_completed_status?.exceededBy ?? 'NIL'
+                                                                : 'NIL'}
+                                                        </td>
+
+                                                        <td className="border border-black text-center px-4 py-2">
+                                                            <div className="flex items-center justify-center">
+                                                                <FaFlag
                                                                     style={{
-                                                                        backgroundColor: buttonText === "QC Pending" ? "transparent" : undefined,
+                                                                        color: data.is_highlight === 1 ? 'orange' : 'gray', // Change color based on highlight state
+                                                                        textAlign: 'center',
+                                                                        fontSize: '30px',
+                                                                        cursor: 'pointer',
+                                                                        boxShadow: '2px 2px 5px rgba(0, 0, 0, 0.5)', // Shadow effect
+                                                                        padding: '4px', // Adds spacing inside the border
+                                                                        borderRadius: '4px', // Rounds the border corners
+                                                                        transition: 'transform 0.2s, color 0.2s', // Smooth animation
                                                                     }}
-                                                                >
-                                                                    {downloadingIndex === actualIndex ? (
-                                                                        <span className="flex items-center gap-2">
-                                                                            <svg
-                                                                                className="animate-spin h-5 w-5 text-white hover:text-green-500"
-                                                                                viewBox="0 0 24 24"
-                                                                                fill="none"
-                                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                            >
-                                                                                <circle
-                                                                                    className="opacity-25"
-                                                                                    cx="12"
-                                                                                    cy="12"
-                                                                                    r="10"
-                                                                                    stroke="currentColor"
-                                                                                    strokeWidth="4"
-                                                                                ></circle>
-                                                                                <path
-                                                                                    className="opacity-75"
-                                                                                    fill="currentColor"
-                                                                                    d="M4 12a8 8 0 018-8v8H4z"
-                                                                                ></path>
-                                                                            </svg>
-                                                                            Downloading...
-                                                                        </span>
-                                                                    ) : buttonText === "DOWNLOAD" ? (
-                                                                        <img
-                                                                            src={pdfIcon}
-                                                                            alt="Download PDF"
-                                                                            className="w-12 h-12 object-contain"
-                                                                        />
-                                                                    ) : (
-                                                                        buttonText
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })()}
-                                                    </td>
+                                                                    onClick={() =>
+                                                                        !isHighlightLoading &&
+                                                                        handleHighlightClick(data.main_id, data.is_highlight === 1 ? 0 : 1)
+                                                                    }
+                                                                    onMouseEnter={(e) => {
+                                                                        e.target.style.color = 'gold'; // Highlight on hover
+                                                                        e.target.style.transform = 'scale(1.1)'; // Slightly enlarge on hover
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.target.style.color = data.is_highlight === 1 ? 'orange' : 'gray'; // Revert color
+                                                                        e.target.style.transform = 'scale(1)'; // Reset size
+                                                                    }}
+                                                                />
+                                                                {isHighlightLoading && data.main_id === activeId && (
+                                                                    <span className="ml-2 text-gray-500">Loading...</span> // Show loading indicator
+                                                                )}
+                                                            </div>
+                                                        </td>
 
 
-                                                    <td className="border border-black px-4  py-2" >
-                                                        <button
-                                                            className={`bg-orange-500 hover:scale-105 *:uppercase border border-white hover:border-orange-500 text-white px-4 py-2 
-    ${loadingIndex === index ? 'opacity-50 cursor-not-allowed' : ''} rounded hover:bg-white hover:text-orange-500`}
-                                                            onClick={() => handleViewMore(index)}
-                                                            disabled={loadingIndex === index} // Disable the button only for the loading row
-                                                        >
-                                                            {expandedRow && expandedRow.index === index ? 'Less' : 'View'}
-                                                        </button>
+                                                        <td className="border border-black px-4 py-2">{formatedJson(data.first_insufficiency_marks) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatDate(data.first_insuff_date, true) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatDate(data.first_insuff_reopened_date) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatedJson(data.second_insufficiency_marks) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatDate(data.second_insuff_date, true) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatedJson(data.third_insufficiency_marks) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatDate(data.third_insuff_date, true) || "No Insuff"}</td>
+                                                        <td className="border border-black px-4 py-2">{formatedJson(data.delay_reason) || "No Insuff"}</td>
 
-                                                    </td>
-                                                    <td className="border border-black px-4 uppercase py-2">{(data.overall_status || 'WIP').replace(/_/g, ' ')}
-                                                    </td>
-                                                    <td className="border border-black px-4 uppercase py-2">{data.report_type?.replace(/_/g, " ") || 'N/A'}</td>
-                                                    <td className="border border-black px-4 py-2">
 
-                                                        {data.report_date
-                                                            ? new Date(data.report_date).toLocaleDateString('en-GB').replace(/\//g, '-')
-                                                            : 'NIL'}
-                                                    </td>
+                                                    </tr>
 
-                                                    <td className="border border-black px-4 py-2">{data.report_generated_by_name || 'N/A'}</td>
-                                                    <td className="border border-black px-4 py-2">{data.qc_done_by_name || 'N/A'}</td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        <button
-                                                            className={`text-white rounded px-4 py-2 bg-red-500 hover:bg-red-600 ${deleteLoading === data.main_id ? 'opacity-50 cursor-not-allowed' : ''
-                                                                }`}
-                                                            onClick={() => handleApplicationDelete(data.main_id)}
-                                                            disabled={deleteLoading === data.main_id}
-                                                        >
 
-                                                            {deleteLoading === data.main_id ? ' Deleting...' : ' Delete'}
-                                                        </button>
-
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        {(data.report_completed_status?.status === 'early' || data.report_completed_status?.status === 'on_time')
-                                                            ? data.report_completed_status?.used ?? 'NIL'
-                                                            : 'NIL'}
-                                                    </td>
-                                                    <td className="border border-black px-4 py-2">
-                                                        {data.report_completed_status?.status === 'exceed'
-                                                            ? data.report_completed_status?.exceededBy ?? 'NIL'
-                                                            : 'NIL'}
-                                                    </td>
-
-                                                    <td className="border border-black text-center px-4 py-2">
-                                                        <div className="flex items-center justify-center">
-                                                            <FaFlag
-                                                                style={{
-                                                                    color: data.is_highlight === 1 ? 'orange' : 'gray', // Change color based on highlight state
-                                                                    textAlign: 'center',
-                                                                    fontSize: '30px',
-                                                                    cursor: 'pointer',
-                                                                    boxShadow: '2px 2px 5px rgba(0, 0, 0, 0.5)', // Shadow effect
-                                                                    padding: '4px', // Adds spacing inside the border
-                                                                    borderRadius: '4px', // Rounds the border corners
-                                                                    transition: 'transform 0.2s, color 0.2s', // Smooth animation
-                                                                }}
-                                                                onClick={() =>
-                                                                    !isHighlightLoading &&
-                                                                    handleHighlightClick(data.main_id, data.is_highlight === 1 ? 0 : 1)
-                                                                }
-                                                                onMouseEnter={(e) => {
-                                                                    e.target.style.color = 'gold'; // Highlight on hover
-                                                                    e.target.style.transform = 'scale(1.1)'; // Slightly enlarge on hover
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.target.style.color = data.is_highlight === 1 ? 'orange' : 'gray'; // Revert color
-                                                                    e.target.style.transform = 'scale(1)'; // Reset size
-                                                                }}
-                                                            />
-                                                            {isHighlightLoading && data.main_id === activeId && (
-                                                                <span className="ml-2 text-gray-500">Loading...</span> // Show loading indicator
-                                                            )}
-                                                        </div>
-                                                    </td>
-
-                                                </tr>
-
-                                                {expandedRow && expandedRow.index === index && (
-                                                    <>
-                                                        <tr>
-                                                            <td colSpan="100%" className="text-center p-4 w-1/4">
-                                                                {/* Table structure to display headings in the first column and statuses in the second column */}
-                                                                <table className="w-1/4">
-                                                                    <tbody>
-
-                                                                        {expandedRow.headingsAndStatuses &&
-                                                                            expandedRow.headingsAndStatuses.map((item, idx) => (
-                                                                                <>
-                                                                                    {item.heading && item.heading !== "null" ? ( // Exclude string "null"
-                                                                                        <tr key={`row-${idx}`}>
-                                                                                            <td className="text-left p-2 border border-black capitalize bg-gray-200">
-                                                                                                {sanitizeText(item.heading)}
-                                                                                            </td>
-                                                                                            <td
-                                                                                                className="text-left p-2 border font-bold border-black uppercase"
-                                                                                                style={getColorStyle(item.status)}
-                                                                                            >
-                                                                                                {isValidDate(item.status) ?
-                                                                                                    formatDate(item.status) :
-                                                                                                    sanitizeText(removeColorNames(item.status))
-                                                                                                }                                                                                            </td>
-                                                                                        </tr>
-                                                                                    ) : null // Skip rendering if heading is null, undefined, or the string "null"
-                                                                                    }
-
-                                                                                </>
-                                                                            ))
-                                                                        }
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200  ref={clientSubmitRef}" id="clientSubmit">First Level Insuff</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatedJson(data.first_insufficiency_marks) || ''}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">First Level Insuff Date</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatDate(data.first_insuff_date)}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">First Level Insuff Reopen Date</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatDate(data.first_insuff_reopened_date)}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">Second Level Insuff</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatedJson(data.second_insufficiency_marks) || ''}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">Second Level Insuff Date</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatDate(data.second_insuff_date)}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">Third Level Insuff Marks</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatedJson(data.third_insufficiency_marks) || ''}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">Third Level Insuff Date</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatDate(data.third_insuff_date)}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">Third Level Insuff Reopen Date</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatDate(data.third_insuff_reopened_date)}</td>
-                                                                        </tr>
-                                                                        <tr>
-                                                                            <td className="text-left p-2 border border-black uppercase bg-gray-200">Reason For Delay</td>
-                                                                            <td className="text-left p-2 border border-black capitalize font-bold">{formatedJson(data.delay_reason) || ''}</td>
-                                                                        </tr>
-
-                                                                    </tbody>
-                                                                </table>
-                                                            </td>
-                                                        </tr>
-                                                    </>
-                                                )}
-                                            </React.Fragment>
-                                        )
-                                    })}
-                                </>
-                            )}
-                        </tbody>
-                    </table>
+                                                </React.Fragment>
+                                            )
+                                        })}
+                                    </>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
                 <div className="flex justify-between items-center mt-4">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
@@ -3170,3 +3357,4 @@ doc.text(
     );
 };
 export default AdminChekin;
+// DONE

@@ -25,6 +25,18 @@ const AddClient = () => {
     const [emailsInput, setEmailsInput] = useState("");
     const [emailError, setEmailError] = useState("");
 
+    const tableScrollRef = useRef(null);
+    const topScrollRef = useRef(null);
+    const [scrollWidth, setScrollWidth] = useState("100%");
+
+    // 🔹 Sync scroll positions
+    const syncScroll = (e) => {
+        if (e.target === topScrollRef.current) {
+            tableScrollRef.current.scrollLeft = e.target.scrollLeft;
+        } else {
+            topScrollRef.current.scrollLeft = e.target.scrollLeft;
+        }
+    };
 
     const navigate = useNavigate();
     const [selectedFields, setSelectedFields] = useState([]);
@@ -96,6 +108,7 @@ const AddClient = () => {
         first_level_matrix_designation: "",
         first_level_matrix_mobile: "",
         custom_address: "",
+        disclaimer_emails: "",
         first_level_matrix_email: "",
         client_standard: "",
         username: "",
@@ -284,6 +297,9 @@ const AddClient = () => {
             };
         });
     };
+
+
+
 
     // 2. Handle price change (focus in/out or typing in the price input)
     const handlePriceChange = (e, service_id) => {
@@ -647,6 +663,7 @@ const AddClient = () => {
                 first_level_matrix_mobile: "",
                 custom_template: "",
                 custom_address: "",
+                disclaimer_emails: "",
                 first_level_matrix_email: "",
                 client_standard: "",
                 username: "",
@@ -710,11 +727,15 @@ const AddClient = () => {
         // Clear any previous API errors
         setApiError("");
     };
-    const Loader = () => (
-        <div className="flex w-full bg-white justify-center items-center h-20">
-            <div className="loader border-t-4 border-[#2c81ba] rounded-full w-10 h-10 animate-spin"></div>
-        </div>
-    );
+
+
+    useEffect(() => {
+        if (tableScrollRef.current) {
+            setScrollWidth(tableScrollRef.current.scrollWidth + "px");
+        }
+    }, [services, loading]); // recalc whenever data changes
+
+
     const handleEmailInputChange = (value) => {
         setEmailsInput(value);
         console.log('value---', value)
@@ -741,7 +762,11 @@ const AddClient = () => {
         const updatedEmails = emails.filter((_, i) => i !== index);
         setEmails(updatedEmails);
     };
-    console.log('customTemplate', customTemplate);
+    const Loader = () => (
+        <div className="flex w-full bg-white justify-center items-center h-20">
+            <div className="loader border-t-4 border-[#2c81ba] rounded-full w-10 h-10 animate-spin"></div>
+        </div>
+    );
     return (
         <div
             className="w-full   border-black border  overflow-hidden"
@@ -775,12 +800,12 @@ const AddClient = () => {
                         )}
                     </div>
                     <div>
-                        <label className="block mb-1 font-medium">Client ID<span className="text-red-500 text-xl" >*</span></label>
+                        <label className="block mb-1 font-medium">Client Unique Code<span className="text-red-500 text-xl" >*</span></label>
                         <input
                             type="text"
                             name="client_code"
                             required
-                            placeholder="Enter Client Unique ID"
+                            placeholder="Enter Client Unique Code"
                             value={clientData.client_code}
                             onChange={handleChange}
                             className={`w-full rounded-md p-2.5 mb-[20px] border ${errors.client_code ? "border-red-500" : "border-gray-300"
@@ -859,12 +884,12 @@ const AddClient = () => {
                         />
                     </div>
                     <div>
-                        <label className="block mb-1 font-medium">GST Number<span className="text-red-500 text-xl" >*</span></label>
+                        <label className="block mb-1 font-medium">GSTIN<span className="text-red-500 text-xl" >*</span></label>
                         <input
                             type="text"
                             name="gstin"
                             required
-                            placeholder="Enter GST Number"
+                            placeholder="Enter GSTIN"
                             value={clientData.gstin}
                             onChange={handleChange}
                             className={`w-full rounded-md p-2.5 mb-[20px] border ${errors.gstin ? "border-red-500" : "border-gray-300"
@@ -896,7 +921,7 @@ const AddClient = () => {
                     </div>
                     <div>
                         <label className="block mb-1 font-medium">
-                            Date Of Service Agreement{" "}<span className="text-red-500 text-xl" >*</span>
+                            Agreement Date{" "}<span className="text-red-500 text-xl" >*</span>
                         </label>
                         <DatePicker
                             selected={clientData.date_agreement ? new Date(clientData.date_agreement) : null}
@@ -909,7 +934,7 @@ const AddClient = () => {
                                     }
                                 });
                             }}
-                            placeholderText="Select Service Agreement Date"
+                            placeholderText="Select Agreement Date"
                             dateFormat="dd-MM-yyyy"
                             className={`w-full rounded-md p-2.5 mb-[20px] uppercase border ${errors.date_agreement ? "border-red-500" : "border-gray-300"
                                 } bg-[#f7f6fb]`}
@@ -1303,16 +1328,34 @@ const AddClient = () => {
 
                     {/* PDF Footer textarea - separate full-width line */}
                     {customTemplate === "yes" && (
-                        <div className="flex justify-center w-full">
-                            <div className="w-full">
-                                <label className="block mb-1 font-medium">PDF Footer</label>
-                                <textarea
-                                    name="custom_address"
-                                    placeholder="Enter PDF Footer"
-                                    onChange={handleChange}
-                                    className="w-full rounded-md p-2.5 mb-[20px] border border-gray-300 bg-[#f7f6fb]"
-                                    rows={2}
-                                ></textarea>
+                        <div className="grid md:grid-cols-2 mb-4 gap-4">
+                            <div className="flex justify-center w-full">
+                                <div className="w-full">
+                                    <label className="block mb-1 font-medium">PDF Footer</label>
+                                    <textarea
+                                        name="custom_address"
+                                        placeholder="Enter PDF Footer"
+                                        onChange={handleChange}
+                                        className="w-full rounded-md p-2.5 mb-[20px] border border-gray-300 bg-[#f7f6fb]"
+                                        rows={2}
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <div className="flex justify-center w-full">
+                                <div className="w-full">
+                                    <label htmlFor="disclaimer_emails" className="block mb-1 font-medium">
+                                        Disclaimer Emails (for PDF)
+                                    </label>
+                                    <textarea
+                                        id="disclaimer_emails"
+                                        name="disclaimer_emails"
+                                        placeholder="Enter email addresses, separated by commas"
+                                        onChange={handleChange}
+                                        className="w-full rounded-md p-2.5 mb-[20px] border border-gray-300 bg-[#f7f6fb]"
+                                        rows={2}
+                                    ></textarea>
+                                </div>
+
                             </div>
                         </div>
                     )}
@@ -1383,174 +1426,182 @@ const AddClient = () => {
                 </div>
 
                 <div className="clientserviceTable">
-                    <div className="overflow-x-scroll py-6 px-0 bg-white mt-10 m-auto">
-                        <table className="min-w-full border border-black  text-sm md:text-base">
-                            <thead className="border-black">
-                                <tr className="bg-[#c1dff2] text-[#4d606b] border-black">
-                                    <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
-                                        Group
-                                    </th>
-                                    <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
-                                        Service code
-                                    </th>
-                                    <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
-                                        Verification Service
-                                    </th>
-                                    <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
-                                        Price
-                                    </th>
-                                    <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
-                                        Select Package
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {services.reduce((acc, item, index) => {
-                                    const isSameGroup =
-                                        index > 0 &&
-                                        item.group_title === services[index - 1].group_title;
+                    <div className="table-container rounded-lg">
+                        {/* Top Scroll */}
+                        <div className="top-scroll" ref={topScrollRef} onScroll={syncScroll}>
+                            <div className="top-scroll-inner" style={{ width: scrollWidth }} />
+                        </div>
 
-                                    if (item.services.length > 0) {
-                                        if (!isSameGroup) {
-                                            acc.push(
-                                                <tr
-                                                    key={`group-${item.group_id}`}
-                                                    className="bg-[#c1dff2] text-[#4d606b]"
-                                                >
-                                                    <th className="py-2 md:py-3 px-4 border-r border-b border-black text-center uppercase whitespace-nowrap">
-                                                        {item.symbol}
-                                                    </th>
-                                                    <th
-                                                        colSpan={4}
-                                                        className="py-2 md:py-3 px-4 border-r border-b border-black text-left pl-[215px] uppercase whitespace-nowrap"
+                        {/* Actual Table Scroll */}
+                        <div className="table-scroll rounded-lg" ref={tableScrollRef} onScroll={syncScroll}>
+                            <table className="min-w-full border border-black  text-sm md:text-base">
+                                <thead className="border-black">
+                                    <tr className="bg-[#c1dff2] text-[#4d606b] border-black">
+                                        <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
+                                            Group
+                                        </th>
+                                        <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
+                                            Service code
+                                        </th>
+                                        <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
+                                            Verification Service
+                                        </th>
+                                        <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
+                                            Price
+                                        </th>
+                                        <th className="py-2 md:py-3 px-4 border-r border-b border-black text-left uppercase whitespace-nowrap">
+                                            Select Package
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {services.reduce((acc, item, index) => {
+                                        const isSameGroup =
+                                            index > 0 &&
+                                            item.group_title === services[index - 1].group_title;
+
+                                        if (item.services.length > 0) {
+                                            if (!isSameGroup) {
+                                                acc.push(
+                                                    <tr
+                                                        key={`group-${item.group_id}`}
+                                                        className="bg-[#c1dff2] text-[#4d606b]"
                                                     >
-                                                        {item.group_title}
-                                                    </th>
-                                                </tr>
-                                            );
+                                                        <th className="py-2 md:py-3 px-4 border-r border-b border-black text-center uppercase whitespace-nowrap">
+                                                            {item.symbol}
+                                                        </th>
+                                                        <th
+                                                            colSpan={4}
+                                                            className="py-2 md:py-3 px-4 border-r border-b border-black text-left pl-[215px] uppercase whitespace-nowrap"
+                                                        >
+                                                            {item.group_title}
+                                                        </th>
+                                                    </tr>
+                                                );
+                                            }
+
+                                            item.services.forEach((service, serviceIndex) => {
+                                                const serviceNumber = serviceIndex + 1;
+
+                                                acc.push(
+                                                    <tr key={`${item.group_id}-${service.service_id}`}>
+                                                        <td className="py-2 md:py-3 px-4 border-l border-black border-r border-b whitespace-nowrap"></td>
+                                                        <td className="py-2 md:py-3 px-4 border-l border-black border-r border-b whitespace-nowrap">
+                                                            {service.service_code}
+                                                        </td>
+                                                        <td className="py-2 md:py-3 px-4 border-l border-r border-black border-b whitespace-nowrap">
+                                                            <div key={service.service_id}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`scope_${service.service_id}`}
+                                                                    name="scopeOfServices"
+                                                                    checked={
+                                                                        selectedServices[service.service_id] || false
+                                                                    }
+                                                                    onChange={() =>
+                                                                        handleCheckboxChange({
+                                                                            group_id: item.group_id,
+                                                                            group_symbol: item.symbol,
+                                                                            service_code: service.service_code,
+                                                                            group_name: item.group_title,
+                                                                            service_id: service.service_id,
+                                                                            service_name: service.service_title,
+                                                                            price:
+                                                                                priceData[service.service_id]
+                                                                                    ?.pricingPackages || "",
+                                                                            selected_packages:
+                                                                                selectedPackages[service.service_id] ||
+                                                                                [],
+                                                                        })
+                                                                    }
+                                                                    className="mr-2 w-5 h-5"
+                                                                />
+                                                                <label
+                                                                    htmlFor={`scope_${service.service_id}`}
+                                                                    className="ml-2"
+                                                                >
+                                                                    {service.service_title}
+                                                                </label>
+                                                            </div>
+                                                        </td>
+
+                                                        <td
+                                                            className="py-2 md:py-3 px-4 border-r border-b border-black whitespace-nowrap"
+                                                            onClick={() => {
+                                                                if (!selectedServices[service.service_id]) {
+                                                                    Swal.fire({
+                                                                        icon: "warning",
+                                                                        title: `Please Select ${service.service_title} Service First`,
+                                                                        showConfirmButton: true,
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="number"
+                                                                name="pricingPackages"
+                                                                value={
+                                                                    priceData[service.service_id]
+                                                                        ?.pricingPackages || ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    handlePriceChange(e, service.service_id)
+                                                                }
+                                                                className="p-2 border rounded"
+                                                                disabled={!selectedServices[service.service_id]}
+                                                                onBlur={(e) =>
+                                                                    handlePriceChange(e, service.service_id)
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td
+                                                            className="py-2 md:py-3 px-4 border-r border-b border-black whitespace-nowrap uppercase text-left"
+                                                            onClick={() => {
+                                                                if (!selectedServices[service.service_id]) {
+                                                                    Swal.fire({
+                                                                        icon: "warning",
+                                                                        title: `Please Select ${service.service_title} Service First`,
+                                                                        showConfirmButton: true,
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MultiSelect
+                                                                options={packageList.map((pkg) => ({
+                                                                    value: pkg.id,
+                                                                    label: pkg.title,
+                                                                }))}
+                                                                value={
+                                                                    selectedPackages[service.service_id]?.map(
+                                                                        (pkgId) => ({
+                                                                            value: pkgId,
+                                                                            label: packageList.find(
+                                                                                (pkg) => pkg.id === pkgId
+                                                                            )?.title,
+                                                                        })
+                                                                    ) || []
+                                                                }
+                                                                onChange={(selectedList) =>
+                                                                    handlePackageChange(
+                                                                        selectedList,
+                                                                        service.service_id
+                                                                    )
+                                                                }
+                                                                labelledBy="Select"
+                                                                disabled={!selectedServices[service.service_id]} // Enable if service is selected
+                                                                className="uppercase"
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
                                         }
 
-                                        item.services.forEach((service, serviceIndex) => {
-                                            const serviceNumber = serviceIndex + 1;
-
-                                            acc.push(
-                                                <tr key={`${item.group_id}-${service.service_id}`}>
-                                                    <td className="py-2 md:py-3 px-4 border-l border-black border-r border-b whitespace-nowrap"></td>
-                                                    <td className="py-2 md:py-3 px-4 border-l border-black border-r border-b whitespace-nowrap">
-                                                        {service.service_code}
-                                                    </td>
-                                                    <td className="py-2 md:py-3 px-4 border-l border-r border-black border-b whitespace-nowrap">
-                                                        <div key={service.service_id}>
-                                                            <input
-                                                                type="checkbox"
-                                                                id={`scope_${service.service_id}`}
-                                                                name="scopeOfServices"
-                                                                checked={
-                                                                    selectedServices[service.service_id] || false
-                                                                }
-                                                                onChange={() =>
-                                                                    handleCheckboxChange({
-                                                                        group_id: item.group_id,
-                                                                        group_symbol: item.symbol,
-                                                                        service_code: service.service_code,
-                                                                        group_name: item.group_title,
-                                                                        service_id: service.service_id,
-                                                                        service_name: service.service_title,
-                                                                        price:
-                                                                            priceData[service.service_id]
-                                                                                ?.pricingPackages || "",
-                                                                        selected_packages:
-                                                                            selectedPackages[service.service_id] ||
-                                                                            [],
-                                                                    })
-                                                                }
-                                                                className="mr-2 w-5 h-5"
-                                                            />
-                                                            <label
-                                                                htmlFor={`scope_${service.service_id}`}
-                                                                className="ml-2"
-                                                            >
-                                                                {service.service_title}
-                                                            </label>
-                                                        </div>
-                                                    </td>
-
-                                                    <td
-                                                        className="py-2 md:py-3 px-4 border-r border-b border-black whitespace-nowrap"
-                                                        onClick={() => {
-                                                            if (!selectedServices[service.service_id]) {
-                                                                Swal.fire({
-                                                                    icon: "warning",
-                                                                    title: `Please Select ${service.service_title} Service First`,
-                                                                    showConfirmButton: true,
-                                                                });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <input
-                                                            type="number"
-                                                            name="pricingPackages"
-                                                            value={
-                                                                priceData[service.service_id]
-                                                                    ?.pricingPackages || ""
-                                                            }
-                                                            onChange={(e) =>
-                                                                handlePriceChange(e, service.service_id)
-                                                            }
-                                                            className="p-2 border rounded"
-                                                            disabled={!selectedServices[service.service_id]}
-                                                            onBlur={(e) =>
-                                                                handlePriceChange(e, service.service_id)
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td
-                                                        className="py-2 md:py-3 px-4 border-r border-b border-black whitespace-nowrap uppercase text-left"
-                                                        onClick={() => {
-                                                            if (!selectedServices[service.service_id]) {
-                                                                Swal.fire({
-                                                                    icon: "warning",
-                                                                    title: `Please Select ${service.service_title} Service First`,
-                                                                    showConfirmButton: true,
-                                                                });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <MultiSelect
-                                                            options={packageList.map((pkg) => ({
-                                                                value: pkg.id,
-                                                                label: pkg.title,
-                                                            }))}
-                                                            value={
-                                                                selectedPackages[service.service_id]?.map(
-                                                                    (pkgId) => ({
-                                                                        value: pkgId,
-                                                                        label: packageList.find(
-                                                                            (pkg) => pkg.id === pkgId
-                                                                        )?.title,
-                                                                    })
-                                                                ) || []
-                                                            }
-                                                            onChange={(selectedList) =>
-                                                                handlePackageChange(
-                                                                    selectedList,
-                                                                    service.service_id
-                                                                )
-                                                            }
-                                                            labelledBy="Select"
-                                                            disabled={!selectedServices[service.service_id]} // Enable if service is selected
-                                                            className="uppercase"
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            );
-                                        });
-                                    }
-
-                                    return acc;
-                                }, [])}
-                            </tbody>
-                        </table>
+                                        return acc;
+                                    }, [])}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
