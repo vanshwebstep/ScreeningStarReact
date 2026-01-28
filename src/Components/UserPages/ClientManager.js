@@ -739,7 +739,7 @@ const ClientManager = () => {
         }
     }, [paginatedData, loading]);
 
-    console.log('formData',formData)
+    console.log('formData', formData)
 
     return (
         <div className="bg-[#c1dff2]  border border-black " ref={clientEditRef} id="clientedit">
@@ -801,7 +801,7 @@ const ClientManager = () => {
                                     className={`w-full m-auto p-3 mb-[20px] border border-gray-300  rounded-md`}
                                 />
 
-                                {errors.photo && <p className="text-red-500 text-sm">{errors.photo}</p>}
+                                {errors.attach_documents && <p className="text-red-500 text-sm">{errors.attach_documents}</p>}
                             </div>
                             {
                                 visibleFeilds.includes("photo") && (
@@ -812,9 +812,35 @@ const ClientManager = () => {
                                             type="file"
                                             name="photo"
                                             ref={fileInputRef}
-                                            accept="image/*"
-                                            onChange={(e) => handleFileChange('photo', e)}
-                                            className={`w-full m-auto p-3 mb-[20px] border ${errors.photo ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                                            accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+
+                                                if (file) {
+                                                    const allowedTypes = [
+                                                        "image/png",
+                                                        "image/jpeg",
+                                                        "image/jpg",
+                                                        "image/webp",
+                                                        "image/gif"
+                                                    ];
+
+                                                    if (!allowedTypes.includes(file.type)) {
+                                                        setErrors(prev => ({
+                                                            ...prev,
+                                                            photo: "Only PNG, JPG, JPEG, WEBP, or GIF images are allowed",
+                                                        }));
+                                                        e.target.value = ""; // reset input
+                                                        return;
+                                                    }
+
+                                                    setErrors(prev => ({ ...prev, photo: "" }));
+                                                }
+
+                                                handleFileChange("photo", e); // now safe to call
+                                            }}
+                                            className={`w-full m-auto p-3 mb-[20px] border ${errors.photo ? "border-red-500" : "border-gray-300"
+                                                } rounded-md`}
                                         />
 
                                         {errors.photo && <p className="text-red-500 text-sm">{errors.photo}</p>}

@@ -1203,7 +1203,7 @@ const AdminChekin = () => {
         });
 
         addFooter(doc);
-
+console.log('servicesData', servicesData);
         doc.addPage();
         let newYPosition = 5;
         const SummaryTitle = "SUMMARY OF THE VERIFICATION CONDUCTED";
@@ -1324,7 +1324,7 @@ const AdminChekin = () => {
                             break; // Stop after first match
                         }
                     }
-
+console.log('displayTextsfssdss',service?.annexureData);
                     return [
                         {
                             content: service?.reportFormJson?.json

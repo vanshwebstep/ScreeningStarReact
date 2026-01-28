@@ -80,45 +80,7 @@ const CandidateBGV = () => {
     };
 
 
-    const fetchImageToBase = async (imageUrls) => {
-        setApiLoading(true); // Set loading state to true before making the request
-        try {
-            // Define headers for the POST request
-            const headers = {
-                "Content-Type": "application/json",
-            };
-
-            // Prepare the body payload for the POST request
-            const raw = {
-                image_urls: imageUrls,
-            };
-
-            // Send the POST request to the API and wait for the response
-            const response = await axios.post(
-                "https://api.goldquestglobal.in/test/image-to-base",
-                raw,
-                { headers }
-            );
-
-            // Assuming the response data contains an array of images
-            return response.data.images || [];  // Return images or an empty array if no images are found
-        } catch (error) {
-            console.error("Error fetching images:", error);
-
-            // If the error contains a response, log the detailed response error
-            if (error.response) {
-                console.error("Response error:", error.response.data);
-            } else {
-                // If no response, it means the error occurred before the server could respond
-                console.error("Request error:", error.message);
-            }
-
-            return null; // Return null if an error occurs
-        } finally {
-            // Reset the loading state after the API request finishes (success or failure)
-            setApiLoading(false);
-        }
-    };
+   
     const decodedValues = getValuesFromUrl(currentURL);
 
     const fullName = cefData.full_name;

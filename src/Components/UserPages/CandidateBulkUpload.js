@@ -10,8 +10,8 @@ import { FaChevronLeft } from 'react-icons/fa';
 
 
 const CandidateBulkUpload = () => {
-      const { validateBranchLogin, setApiLoadingBranch, apiLoadingBranch } = useApiLoadingBranch();
-    
+    const { validateBranchLogin, setApiLoadingBranch, apiLoadingBranch } = useApiLoadingBranch();
+
     const [fileName, setFileName] = useState("");
     const [isFileValid, setIsFileValid] = useState(false);
     const navigate = useNavigate();
@@ -72,7 +72,7 @@ const CandidateBulkUpload = () => {
 
         const { customer_id } = branchData;
         const branch_id = branchData?.branch_id;
- 
+
         const branch_token = localStorage.getItem("branch_token");
 
         const url = `https://api.screeningstar.co.in/branch/candidate-application/listings?customer_id=${customer_id}&branch_id=${branch_id}&_token=${branch_token}`;
@@ -86,12 +86,12 @@ const CandidateBulkUpload = () => {
                 response = await fetch(url);
             }
             if (response.ok) {
-        setApiLoadingBranch(false);
-        setLoading(false);
+                setApiLoadingBranch(false);
+                setLoading(false);
                 const branch_token = localStorage.getItem("branch_token");
                 const result = await response.json();
-                const newToken = result.token || result._token || branch_token ||'';
-                console.log('token save hua hai = ',newToken )
+                const newToken = result.token || result._token || branch_token || '';
+                console.log('token save hua hai = ', newToken)
                 if (newToken) {
                     localStorage.setItem("branch_token", newToken);
                 }
@@ -114,13 +114,13 @@ const CandidateBulkUpload = () => {
                 setSpocID(result.data.customer.spoc_details[0].id);
                 setSpocName(result.data.customer.spoc_details[0].name);
             } else {
-        setApiLoadingBranch(false);
-        setLoading(false);
+                setApiLoadingBranch(false);
+                setLoading(false);
                 console.log('Error fetching data:', response.statusText);
             }
         } catch (error) {
-        setApiLoadingBranch(false);
-        setLoading(false);
+            setApiLoadingBranch(false);
+            setLoading(false);
             console.error('Error fetching data:', error);
         }
         setApiLoadingBranch(false);
@@ -131,8 +131,8 @@ const CandidateBulkUpload = () => {
         const initialize = async () => {
             try {
                 if (apiLoadingBranch == false) {
-                await validateBranchLogin();
-                await fetchCustomerInfo();
+                    await validateBranchLogin();
+                    await fetchCustomerInfo();
                 }
             } catch (error) {
                 console.error(error.message);
@@ -356,13 +356,15 @@ const CandidateBulkUpload = () => {
         setServices(updatedServices); // Assuming 'setServices' is the function to update state
     };
     const uniquePackages = [
-        ...new Set(
-            services
-                .flatMap(group => group.services.flatMap(service =>
-                    service.packages.map(pkg => ({ id: pkg.id, name: pkg.name }))
-                ))
-        )
+        ...new Map(
+            (services ?? [])
+                .flatMap(group => group?.services ?? [])
+                .flatMap(service => service?.packages ?? [])
+                .filter(pkg => pkg?.id && pkg?.name)
+                .map(pkg => [pkg.id, { id: pkg.id, name: pkg.name }])
+        ).values()
     ];
+
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -542,7 +544,7 @@ const CandidateBulkUpload = () => {
                         </div>
                         <div className='md:w-3/5 margin-l '>
                             <div className="space-y-4 m-auto w-full  bg-white rounded-md">
-                            <CustomMultiSelect
+                                <CustomMultiSelect
                                     options={Array.from(new Set(uniquePackages.map(pkg => pkg.name)))
                                         .map(name => ({ label: name, value: name }))
                                     }
@@ -575,7 +577,7 @@ const CandidateBulkUpload = () => {
                                                     <tr className="text-center whitespace-nowrap    " key={service.serviceId}>
                                                         <td className="border border-black px-4 py-2">
                                                             <input
-                                                            className='w-6 h-6'
+                                                                className='w-6 h-6'
                                                                 type="checkbox"
                                                                 checked={service.isSelected || false}
                                                                 name="services[]"
@@ -584,7 +586,7 @@ const CandidateBulkUpload = () => {
                                                                 }
                                                             />
                                                         </td>
-                                                        
+
                                                         <td className="border border-black px-4 py-2 text-left">{service.serviceTitle}</td>
                                                     </tr>
                                                 ))}

@@ -16,7 +16,10 @@ const DataGenerateReport = () => {
     const navigate = useNavigate();
     const { validateAdminLogin, setApiLoading, apiLoading } = useApiLoading();
     const [checkboxState, setCheckboxState] = useState({});
-
+function formatDateSafe(dateValue) {
+  const date = new Date(dateValue);
+  return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+}
     const [submittedData, setSubmittedData] = useState(null); // State to hold submitted data
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -256,11 +259,8 @@ const DataGenerateReport = () => {
                             : (prevFormData?.updated_json?.insuffDetails?.initiation_date
                                 ? new Date(prevFormData.updated_json.insuffDetails.initiation_date).toISOString().split('T')[0]
                                 : ''),
-                        dob: cmtData?.dob
-                            ? new Date(cmtData.dob).toISOString().split('T')[0]
-                            : (prevFormData?.updated_json?.insuffDetails?.dob
-                                ? new Date(prevFormData.updated_json.insuffDetails.dob).toISOString().split('T')[0]
-                                : ''),
+                        dob: formatDateSafe(cmtData?.dob || prevFormData?.updated_json?.insuffDetails?.dob),
+
                         marital_status: cmtData.marital_status || prevFormData.updated_json.marital_status || '',
                         insuff: cmtData.insuff || prevFormData.updated_json.insuff || '',
                         address: {

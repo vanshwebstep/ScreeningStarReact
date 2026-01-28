@@ -36,13 +36,15 @@ const GenerateInvoice = () => {
     const state = states.find((st) => st.isoCode === code.toUpperCase());
     return state ? state.name : "N/A";
   };
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
   const [sgst, setSgst] = useState([]);
   const [totalTax, setTotalTax] = useState([]);
   const [totalAmount, setTotalAmount] = useState([]);
   const [servicesData, setServicesData] = useState([]);
   const navigate = useNavigate();
-
+  console.log('years', years)
   const [formData, setFormData] = useState({
     client_code: '',
     invoice_number: "",
@@ -818,7 +820,7 @@ const GenerateInvoice = () => {
 
       });
     });
-    const taxableValuess = result.taxableAmount;
+    const taxableValuess = result?.taxableAmount;
 
     let totalServiceQty = 0;
 
@@ -1509,14 +1511,17 @@ const GenerateInvoice = () => {
                 name="year"
                 onChange={handleChange}
                 value={formData.year}
-                className="w-full p-3 mb-[20px] bg-[#f7f6fb]  border border-gray-300 rounded-md"
+                className="w-full p-3 mb-[20px] bg-[#f7f6fb] border border-gray-300 rounded-md"
               >
-                <option>--Select Year--</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
+                <option value="">--Select Year--</option>
+
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
               </select>
+
               {errors.year && <p className="text-red-500 text-sm">{errors.year}</p>}
             </div>
 

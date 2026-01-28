@@ -1,0 +1,65 @@
+{
+	"info": {
+		"_postman_id": "a56db96a-297e-401f-add5-dbc5a66f267a",
+		"name": "Screeningstar Api's",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "37420138",
+		"_collection_link": "https://dfd222-6957.postman.co/workspace/dfd-Workspace~53e84225-ce9f-47be-8715-31da86279e65/collection/37420138-a56db96a-297e-401f-add5-dbc5a66f267a?action=share&source=collection_link&creator=37420138"
+	},
+	"item": [
+		{
+			"name": "Services Api",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/branch/api/services?access_token={{access_token}}",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"branch",
+						"api",
+						"services"
+					],
+					"query": [
+						{
+							"key": "access_token",
+							"value": "{{access_token}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Candidate Application Api",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"access_token\": \"{{access_token}}\",\r\n    \"name\": \"John Doe\",\r\n    \"employee_id\": \"EMP12345\",\r\n    \"mobile_number\": \"8888888888\",\r\n    \"email\": \"johndoe@example.com\",\r\n    \"services\": \"1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,35,37,65,66,67,68,69,74,75,76,77,78,79\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/branch/api/candidate-application/create",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"branch",
+						"api",
+						"candidate-application",
+						"create"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -314,6 +314,9 @@ const RecordTrackers = () => {
     const year = dateObj.getFullYear();
     return `${day}-${month}-${year}`;
   };
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+
   let servicePricingArr = [];
   return (
     <div className="w-full bg-[#c1dff2] border border-black overflow-hidden">
@@ -378,10 +381,11 @@ const RecordTrackers = () => {
                     value={fromYear}
                     onChange={handleInputChange}
                   >
-                    <option value="">SELECT YEAR</option>
-                    {[2025, 2024, 2023, 2022].map((yr) => (
-                      <option key={yr} value={yr}>
-                        {yr}
+                    <option value="">--Select Year--</option>
+
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
                       </option>
                     ))}
                   </select>
@@ -396,12 +400,13 @@ const RecordTrackers = () => {
                     value={toYear}
                     onChange={handleInputChange}
                   >
-                    <option value="">SELECT YEAR</option>
-                    {[2025, 2024, 2023, 2022].map((yr) => (
-                      <option key={yr} value={yr}>
-                        {yr}
-                      </option>
-                    ))}
+                    <option value="">--Select Year--</option>
+
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
                   </select>
                 </div>
               </div>

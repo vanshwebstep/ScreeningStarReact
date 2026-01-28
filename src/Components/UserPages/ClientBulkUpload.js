@@ -357,13 +357,15 @@ const ClientBulkUpload = () => {
         setServices(updatedServices); // Assuming 'setServices' is the function to update state
     };
     const uniquePackages = [
-        ...new Set(
-            services
-                .flatMap(group => group.services.flatMap(service =>
-                    service.packages.map(pkg => ({ id: pkg.id, name: pkg.name }))
-                ))
-        )
+        ...new Map(
+            (services ?? [])
+                .flatMap(group => group?.services ?? [])
+                .flatMap(service => service?.packages ?? [])
+                .filter(pkg => pkg?.id && pkg?.name)
+                .map(pkg => [pkg.id, { id: pkg.id, name: pkg.name }])
+        ).values()
     ];
+
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
