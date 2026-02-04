@@ -22,7 +22,7 @@ const DigitalAddressVerification = () => {
             mobile_number: '',
             email: '',
             candidate_location: '',
-            candidate_address:'',
+            candidate_address: '',
             aadhaar_number: '',
             dob: '',
             father_name: '',
@@ -91,50 +91,92 @@ const DigitalAddressVerification = () => {
         return decodeKeyValuePairs(result);
     };
     const handleFileChange = (fileName, e) => {
-        const selectedFiles = Array.from(e.target.files); // Convert FileList to an array
+        console.log("==== File Change Triggered ====");
+        console.log("Field Name:", fileName);
 
-        const maxSize = 2 * 1024 * 1024; // 2MB size limit
+        const selectedFiles = Array.from(e.target.files);
+        console.log("Selected Files:", selectedFiles);
+
+        const maxSize = 100 * 1024 * 1024; // 2MB
+        console.log("Max Size Allowed:", maxSize);
+
         const allowedTypes = [
-            'image/jpeg', 'image/png', 'application/pdf',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        ]; // Allowed file types
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ];
+        console.log("Allowed Types:", allowedTypes);
 
         let errors = [];
+        let validFiles = [];
 
-        // Validate each file
-        selectedFiles.forEach((file) => {
-            // Check file size
+        selectedFiles.forEach((file, index) => {
+            console.log(`--- Checking File ${index + 1} ---`);
+            console.log("Name:", file.name);
+            console.log("Size:", file.size);
+            console.log("Type:", file.type);
+
             if (file.size > maxSize) {
-                errors.push(`${file.name}: File size must be less than 2MB.`);
+                console.log("❌ Rejected: Size too large");
+                errors.push(`${file.name}: File size must be less than 2MB`);
             }
-
-            // Check file type (MIME type)
-            if (!allowedTypes.includes(file.type)) {
-                errors.push(`${file.name}: Invalid file type. Only JPG, PNG, PDF, DOCX, and XLSX are allowed.`);
+            else if (!allowedTypes.includes(file.type)) {
+                console.log("❌ Rejected: Invalid type");
+                errors.push(`${file.name}: Invalid file type`);
+            }
+            else {
+                console.log("✅ Accepted");
+                validFiles.push(file);
             }
         });
 
-        // If there are errors, show them and don't update the state
-        if (errors.length > 0) {
-            setErrors((prevErrors) => ({
-                ...prevErrors,
-                [fileName]: errors, // Set errors for this file
+        console.log("Valid Files:", validFiles);
+        console.log("Errors:", errors);
+
+        // If no valid files at all
+        if (validFiles.length === 0) {
+            console.log("No valid files found. Setting only errors.");
+
+            setErrors(prev => ({
+                ...prev,
+                [fileName]: errors
             }));
-            return; // Don't update state if there are errors
+
+            return;
         }
 
-        // If no errors, update the state with the selected files
-        setFiles((prevFiles) => ({
-            ...prevFiles,
-            [fileName]: selectedFiles,
+        // Save only valid files
+        console.log("Saving valid files to state...");
+
+        setFiles(prev => ({
+            ...prev,
+            [fileName]: validFiles
         }));
 
-        setErrors((prevErrors) => {
-            const { [fileName]: removedError, ...restErrors } = prevErrors; // Remove the error for this field if valid
-            return restErrors;
-        });
+        // Show warnings if some files rejected
+        if (errors.length > 0) {
+            console.log("Some files rejected. Saving errors.");
+
+            setErrors(prev => ({
+                ...prev,
+                [fileName]: errors
+            }));
+        } else {
+            console.log("No errors. Clearing previous errors.");
+
+            setErrors(prev => {
+                const { [fileName]: removed, ...rest } = prev;
+                return rest;
+            });
+        }
+
+        console.log("==== File Change Completed ====");
     };
+
+
     const decodedValues = getValuesFromUrl(currentURL);
 
     const handleChange = (e) => {
@@ -150,7 +192,7 @@ const DigitalAddressVerification = () => {
                 }
             }));
         } else {
-            console.log('printerfdtaha',formData);
+            console.log('printerfdtaha', formData);
             setFormData(prev => ({
                 ...prev,
                 personal_information: {
@@ -160,7 +202,7 @@ const DigitalAddressVerification = () => {
                     longitude: mapLocation.longitude
                 }
             }));
-            
+
         }
     };
     const isApplicationExists = useCallback(() => {
@@ -225,7 +267,7 @@ const DigitalAddressVerification = () => {
                                 mobile_number: result.data?.mobile_number || '',
                                 email: result.data?.email || '',
                                 candidate_location: '',
-                                candidate_address:'',
+                                candidate_address: '',
                                 aadhaar_number: '',
                                 dob: '',
                                 father_name: '',
@@ -259,30 +301,84 @@ const DigitalAddressVerification = () => {
             setLoading(false); // If conditions are not met, stop loading
         }
     }, [isValidApplication, decodedValues]);
+    const uploadCustomerLogo = async (
+        candidate_application_id,
+        branch_id,
+        customer_id
+    ) => {
 
-    const uploadCustomerLogo = async (candidate_application_id, branch_id, customer_id) => {
+        console.log("====== Upload Started ======");
+        console.log("Candidate Application ID:", candidate_application_id);
+        console.log("Branch ID:", branch_id);
+        console.log("Customer ID:", customer_id);
+        console.log("Files Object:", files);
+
         for (const [key, value] of Object.entries(files)) {
+
+            console.log("----------------------------------");
+            console.log("Processing Category:", key);
+            console.log("Files in Category:", value);
+
+            if (!value || value.length === 0) {
+                console.log("⚠️ No files found for:", key);
+                continue;
+            }
+
             const customerLogoFormData = new FormData();
+
             customerLogoFormData.append("branch_id", branch_id);
             customerLogoFormData.append("customer_id", customer_id);
             customerLogoFormData.append("application_id", candidate_application_id);
             customerLogoFormData.append("upload_category", key);
-            for (const file of value) {
-                customerLogoFormData.append("images", file);
-            }
-
             customerLogoFormData.append("send_mail", 1);
 
+            console.log("FormData Basic Fields Added");
+
+            value.forEach((file, index) => {
+                console.log(`Adding File ${index + 1}:`, file.name);
+                customerLogoFormData.append("images", file);
+            });
+
+            // Optional: Inspect FormData
+            console.log("FormData Preview:");
+            for (let pair of customerLogoFormData.entries()) {
+                console.log(pair[0], pair[1]);
+            }
+
             try {
-                const response = await axios.post(`https://api.screeningstar.co.in/branch/candidate-application/digital-address-verification/upload`, customerLogoFormData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
+                console.log("Uploading category:", key);
+
+                const response = await axios.post(
+                    "https://api.screeningstar.co.in/branch/candidate-application/digital-address-verification/upload",
+                    customerLogoFormData,
+                    {
+                        headers: { "Content-Type": "multipart/form-data" }
+                    }
+                );
+
+                console.log("✅ Upload Success for:", key);
+                console.log("Response:", response.data);
+
             } catch (err) {
-                Swal.fire("Error!", `Error uploading files: ${err.message}`, "error");
-                throw err; // Stop process if upload fails
+
+                console.error("❌ Upload Failed for:", key);
+                console.error("Error Message:", err.message);
+                console.error("Error Response:", err.response);
+
+                Swal.fire(
+                    "Error!",
+                    `Error uploading files: ${err.message}`,
+                    "error"
+                );
+
+                throw err;
             }
         }
+
+        console.log("====== Upload Finished ======");
     };
+
+
 
     useEffect(() => {
         isApplicationExists();
@@ -293,74 +389,56 @@ const DigitalAddressVerification = () => {
 
     const handleSubmitForm = async (e) => {
         e.preventDefault();
-        setLoading(true); // Start loading
-        const fileCount = Object.keys(files).length;
-        const myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-        const form = document.getElementById('bg-form');
-        const personal_information = formData.personal_information;
+        setLoading(true);
+
+        const fileCount = Object.values(files).flat().length;
 
         const raw = JSON.stringify({
             branch_id: decodedValues.branch_id,
             customer_id: decodedValues.customer_id,
             application_id: decodedValues.app_id,
-            personal_information,
+            personal_information: formData.personal_information
         });
-
-        const requestOptions = {
-            method: "PUT",
-            headers: myHeaders,
-            body: raw,
-            redirect: "follow"
-        };
 
         try {
             const response = await fetch(
                 "https://api.screeningstar.co.in/branch/candidate-application/digital-address-verification/submit",
-                requestOptions
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: raw
+                }
             );
+
             const result = await response.json();
 
-            if (result.status) {
-                if (fileCount === 0) {
-                    Swal.fire({
-                        title: "Success",
-                        text: `Client Created Successfully.`,
-                        icon: "success",
-                        confirmButtonText: "Ok",
-                    });
-                } else if (fileCount > 0) {
-                    await uploadCustomerLogo(
-                        decodedValues.app_id,
-                        decodedValues.branch_id,
-                        decodedValues.customer_id
-                    );
-                    Swal.fire({
-                        title: "Success",
-                        text: `Client Created Successfully.`,
-                        icon: "success",
-                        confirmButtonText: "Ok",
-                    });
-                }
-            } else {
-                Swal.fire({
-                    title: 'Error',
-                    text: result.message,
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
+            if (!result.status) {
+                Swal.fire("Error", result.message, "error");
+                return;
             }
+
+            // Upload files only if exist
+            if (fileCount > 0) {
+                await uploadCustomerLogo(
+                    decodedValues.app_id,
+                    decodedValues.branch_id,
+                    decodedValues.customer_id
+                );
+            }
+
+            Swal.fire("Success", "Client Created Successfully.", "success");
+
         } catch (error) {
-            Swal.fire({
-                title: 'Error',
-                text: 'An error occurred during submission.',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
+            Swal.fire(
+                "Error",
+                "An error occurred during submission.",
+                "error"
+            );
         } finally {
-            setLoading(false); // Stop loading after operations complete
+            setLoading(false);
         }
     };
+
 
 
     console.log('data', data)
@@ -370,16 +448,16 @@ const DigitalAddressVerification = () => {
             <form action="" onSubmit={handleSubmitForm} className='p-4' id='bg-form'>
                 {loading ? (
                     <div className="flex justify-center items-center h-screen w-screen">
-                    {/* <PulseLoader 
+                        {/* <PulseLoader 
                         color="#36D7B7" 
                         loading={loading} 
                         size={15} 
                         aria-label="Candidate Loading Spinner" 
                     /> */}
-                </div>
+                    </div>
                 ) : (
                     <>
-                    
+
                         <h3 className="text-center py-3 font-bold text-2xl">Digital Address Verification</h3>
 
                         <div className="border md:w-7/12 m-auto p-4 ">
