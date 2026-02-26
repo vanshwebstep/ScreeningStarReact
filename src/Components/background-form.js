@@ -999,7 +999,7 @@ const BackgroundVerificationForm = () => {
                                         )}
 
                                     </div>
-                                    < div className="form-group col-span-2 border-orange-500 p-4 rounded-md border-2" >
+                                    <div className="form-group col-span-2 border-orange-500 p-4 rounded-md border-2" >
                                         <label className='font-bold'> Upload Photo:</label >
                                         <input
                                             type="file"
@@ -1063,8 +1063,8 @@ const BackgroundVerificationForm = () => {
                                         />
                                         {errors.driving_licence && <p className="text-red-500">{errors.driving_licence}</p>}
                                     </div>
-
-                                    <div className="form-group col-span-2">
+*/}
+                                    <div className="form-group col-span-2 border-orange-500 p-4 rounded-md border-2">
                                         <label className="font-bold">Aadhaar Card: <span className="text-red-500">*</span></label>
                                         <input
                                             type="file"
@@ -1076,15 +1076,16 @@ const BackgroundVerificationForm = () => {
                                             ref={(el) => (refs.current["aadhaar_card"] = el)}
                                         />
                                         {errors.aadhaar_card && <p className="text-red-500">{errors.aadhaar_card}</p>}
-                                    </div> */}
-                                    {/* <p className="text-gray-500 text-sm mt-2" >
-                                            Only JPG, PNG, PDF, DOCX, and XLSX files are allowed.Max file size: 2MB.
-                                        </p> */}
+                                          {cefApp && cefApp.aadhaar_card && (
+                                            <div className="mt-2 object-cover max-w-60 rounded-md">
+                                                <FileViewer fileUrl={cefApp.aadhaar_card} className="" />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 < div className='border border-orange-500 bg-white shadow-md  p-6 rounded-md' >
                                     <h4 className="md:text-center text-start md:text-2xl text-sm my-6 font-bold " > Personal Information </h4>
-
                                     < div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 " >
                                         <div className="form-group" >
                                             <label className='font-bold' htmlFor="full_name" > Full Name as per Govt ID Proof(first, middle, last): <span className="text-red-500" >* </span></label >

@@ -301,6 +301,7 @@ const DigitalAddressVerification = () => {
             setLoading(false); // If conditions are not met, stop loading
         }
     }, [isValidApplication, decodedValues]);
+
     const uploadCustomerLogo = async (
         candidate_application_id,
         branch_id,
@@ -308,21 +309,16 @@ const DigitalAddressVerification = () => {
     ) => {
 
         console.log("====== Upload Started ======");
-        console.log("Candidate Application ID:", candidate_application_id);
-        console.log("Branch ID:", branch_id);
-        console.log("Customer ID:", customer_id);
-        console.log("Files Object:", files);
 
-        for (const [key, value] of Object.entries(files)) {
+        const entries = Object.entries(files);
 
-            console.log("----------------------------------");
-            console.log("Processing Category:", key);
-            console.log("Files in Category:", value);
+        for (let i = 0; i < entries.length; i++) {
 
-            if (!value || value.length === 0) {
-                console.log("⚠️ No files found for:", key);
-                continue;
-            }
+            const [key, value] = entries[i];
+
+            if (!value || value.length === 0) continue;
+
+            const isLast = i === entries.length - 1;
 
             const customerLogoFormData = new FormData();
 
@@ -330,25 +326,17 @@ const DigitalAddressVerification = () => {
             customerLogoFormData.append("customer_id", customer_id);
             customerLogoFormData.append("application_id", candidate_application_id);
             customerLogoFormData.append("upload_category", key);
-            customerLogoFormData.append("send_mail", 1);
 
-            console.log("FormData Basic Fields Added");
+            // ⭐ ONLY LAST REQUEST SENDS MAIL
+            customerLogoFormData.append("send_mail", isLast ? 1 : 0);
 
-            value.forEach((file, index) => {
-                console.log(`Adding File ${index + 1}:`, file.name);
+            value.forEach(file => {
                 customerLogoFormData.append("images", file);
             });
 
-            // Optional: Inspect FormData
-            console.log("FormData Preview:");
-            for (let pair of customerLogoFormData.entries()) {
-                console.log(pair[0], pair[1]);
-            }
-
             try {
-                console.log("Uploading category:", key);
 
-                const response = await axios.post(
+                await axios.post(
                     "https://api.screeningstar.co.in/branch/candidate-application/digital-address-verification/upload",
                     customerLogoFormData,
                     {
@@ -356,14 +344,11 @@ const DigitalAddressVerification = () => {
                     }
                 );
 
-                console.log("✅ Upload Success for:", key);
-                console.log("Response:", response.data);
+                console.log(`✅ Uploaded ${key} | send_mail=${isLast ? 1 : 0}`);
 
             } catch (err) {
 
-                console.error("❌ Upload Failed for:", key);
-                console.error("Error Message:", err.message);
-                console.error("Error Response:", err.response);
+                console.error("Upload failed:", err);
 
                 Swal.fire(
                     "Error!",
@@ -377,6 +362,7 @@ const DigitalAddressVerification = () => {
 
         console.log("====== Upload Finished ======");
     };
+
 
 
 

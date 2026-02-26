@@ -62,7 +62,7 @@ export default function ApiIntegration() {
       if (newToken) {
         setAccessToken(newToken);
       }
-fetchAccessToken();
+      fetchAccessToken();
       Swal.fire("Success!", "New access token generated successfully", "success");
 
     } catch (error) {
@@ -72,14 +72,14 @@ fetchAccessToken();
       setIsLoading(false);
     }
   };
-const handleDownload = () => {
-  const link = document.createElement("a");
-  link.href = "/ScreeningstarApi's.postman_collection";
-  link.download = "ScreeningstarApi's.postman_collection";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+  const handleDownload = () => {
+    const link = document.createElement("a");
+    link.href = "/ScreeningstarApi's.postman_collection";
+    link.download = "ScreeningstarApi's.postman_collection";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   const copyToken = () => {
     navigator.clipboard.writeText(accessToken);
     Swal.fire("Copied!", "Access token copied to clipboard.", "success");
@@ -136,11 +136,11 @@ const handleDownload = () => {
               Download Postman<br />Collection
             </p>
             <button
-  onClick={handleDownload}
-  className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full text-lg"
->
-  Download
-</button>
+              onClick={handleDownload}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full text-lg"
+            >
+              Download
+            </button>
           </div>
         </div>
 
