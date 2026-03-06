@@ -114,7 +114,7 @@ const ChecklistAndEscalation = () => {
               <td className='border border-black  px-4 py-2 '>
 
                 <a
-                  href="http://screeningstar.in/chkmatrixfiles/Screeningstar_Standard_BackGround_Verification_Form.pdf"
+                  href="https://screeningstar.in/chkmatrixfiles/Screeningstar_Standard_BackGround_Verification_Form.pdf"
                   download=""
                   target="_blank"
                   rel="noopener noreferrer"
@@ -137,7 +137,7 @@ const ChecklistAndEscalation = () => {
               <td className='border border-black  px-4 py-2 whitespace-nowrap'>Employee Background Verification Standard Form</td>
               <td className='border border-black  px-4 py-2'>
                 <a
-                  href="http://screeningstar.in/chkmatrixfiles/Screeningstar_Standard_BackGround_Verification_Form.xls"
+                  href="https://screeningstar.in/chkmatrixfiles/Screeningstar_Standard_BackGround_Verification_Form.xls"
                   download=""
                   className="flex items-center justify-between gap-3"
                 >
@@ -156,7 +156,7 @@ const ChecklistAndEscalation = () => {
               <td className='border border-black  px-4 py-2 whitespace-nowrap'>Checklist and List of documents required for BGV</td>
               <td className='border border-black  px-4 py-2'>
                 <a
-                  href="http://screeningstar.in/chkmatrixfiles/DOCUMENT_CHECKLIST.pdf"
+                  href="https://screeningstar.in/chkmatrixfiles/DOCUMENT_CHECKLIST.pdf"
                   download=""
                   target="_blank"
                   rel="noopener noreferrer"
@@ -175,28 +175,28 @@ const ChecklistAndEscalation = () => {
             <tr>
               <td className='border border-black  px-4 py-2 text-center'>4</td>
               <td className='border border-black  px-4 py-2 whitespace-nowrap'>Screeningstar Colour Code Matrix</td>
-              <td className='border border-black  px-4 py-2'>
-                <a
-                  href="http://screeningstar.in/chkmatrixfiles/Colour_Code_Matrix.xlsx"
-                  download=""
-                  className="flex items-center justify-between gap-3"
-                >
-                  Colour Code Matrix
-                  <img
-                    src={excelIcon}
-                    alt="PDF Icon"
-                    className="w-10 mr-[50px]"
-                    style={{ color: 'red', fontSize: '40px' }}
-                  />
-                </a>
-              </td>
+                <td className='border border-black  px-4 py-2'>
+                  <a
+                    href="https://screeningstar.in/chkmatrixfiles/Colour_Code_Matrix.xlsx"
+                    download=""
+                    className="flex items-center justify-between gap-3"
+                  >
+                    Colour Code Matrix
+                    <img
+                      src={excelIcon}
+                      alt="PDF Icon"
+                      className="w-10 mr-[50px]"
+                      style={{ color: 'red', fontSize: '40px' }}
+                    />
+                  </a>
+                </td>
             </tr>
             <tr>
               <td className='border border-black  px-4 py-2 text-center'>5</td>
               <td className='border border-black  px-4 py-2 whitespace-nowrap' >Screeningstar Scope of Process</td>
               <td className='border border-black  px-4 py-2'>
                 <a
-                  href="http://screeningstar.in/chkmatrixfiles/Scope_of_Process.pdf"
+                  href="https://screeningstar.in/chkmatrixfiles/Scope_of_Process.pdf"
                   download=""
                   target="_blank"
                   rel="noopener noreferrer"
@@ -217,7 +217,7 @@ const ChecklistAndEscalation = () => {
               <td className='border border-black  px-4 py-2 whitespace-nowrap'>Business Proposal for Employee Background Verification Services</td>
               <td className='border border-black  px-4 py-2'>
                 <a
-                  href="http://screeningstar.in/chkmatrixfiles/SCREENINGSTAR_BUSINESS_PROPOSAL_FOR_BGV.pdf"
+                  href="https://screeningstar.in/chkmatrixfiles/SCREENINGSTAR_BUSINESS_PROPOSAL_FOR_BGV.pdf"
                   download=""
                   target="_blank"
                   rel="noopener noreferrer"
@@ -238,7 +238,7 @@ const ChecklistAndEscalation = () => {
               <td className='border border-black  px-4 py-2 whitespace-nowrap'>Background Verification Sample Report</td>
               <td className='border border-black  px-4 py-2'>
                 <a
-                  href="http://screeningstar.in/chkmatrixfiles/Screeningstar_Standard_BackGround_Verification_Form.pdf"
+                  href="https://screeningstar.in/chkmatrixfiles/Screeningstar_Standard_BackGround_Verification_Form.pdf"
                   download=""
                   target="_blank"
                   rel="noopener noreferrer"

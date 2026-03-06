@@ -667,13 +667,12 @@ const CLientTrashed = () => {
             <div className="loader border-t-4 border-[#2c81ba] rounded-full w-10 h-10 animate-spin"></div>
         </div>
     );
-    const filteredData = tableData.filter(
-        (item) =>
-            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.application_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.employee_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.location.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const filteredData = tableData.filter((item) =>
+  (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (item.application_id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (item.employee_id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (item.location || "").toLowerCase().includes(searchTerm.toLowerCase())
+);
     const totalTablePages = Math.ceil(filteredData.length / rowsPerPage);
     const paginatedData = filteredData.slice(
         (tableCurrentPage - 1) * rowsPerPage,
