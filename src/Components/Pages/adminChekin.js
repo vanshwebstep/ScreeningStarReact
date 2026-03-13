@@ -1203,7 +1203,7 @@ const AdminChekin = () => {
         });
 
         addFooter(doc);
-console.log('servicesData', servicesData);
+        console.log('servicesData', servicesData);
         doc.addPage();
         let newYPosition = 5;
         const SummaryTitle = "SUMMARY OF THE VERIFICATION CONDUCTED";
@@ -1324,7 +1324,7 @@ console.log('servicesData', servicesData);
                             break; // Stop after first match
                         }
                     }
-console.log('displayTextsfssdss',service?.annexureData);
+                    console.log('displayTextsfssdss', service?.annexureData);
                     return [
                         {
                             content: service?.reportFormJson?.json
@@ -2489,6 +2489,7 @@ console.log('displayTextsfssdss',service?.annexureData);
             "Name Of APPLICANT",
             "Reference Id",
             "Employee Id",
+            "Interim Date",
             "Check ID",
             "Ticket ID",
             "Case ID",
@@ -2563,6 +2564,7 @@ console.log('displayTextsfssdss',service?.annexureData);
                 item.name || "NIL",
                 item.application_id || "NIL",
                 item.employee_id || "NIL",
+                formatDate(item.interim_date) || "NIL",
                 item.check_id || "NIL",
                 item.ticket_id || "",
                 item.case_id || "",
@@ -3011,6 +3013,8 @@ console.log('displayTextsfssdss',service?.annexureData);
 
                                     <th className="uppercase border border-black px-4 py-2">Photo</th>
                                     <th className="uppercase border border-black px-4 py-2">Employee Id</th>
+                                    <th className="uppercase border border-black px-4 py-2">Interim Date</th>
+
                                     <th className="uppercase border border-black px-4 py-2">
                                         <button
                                             className="bg-orange-500 hover:scale-105  hover:bg-orange-600 text-white px-6 py-2 rounded"
@@ -3129,6 +3133,11 @@ console.log('displayTextsfssdss',service?.annexureData);
                                                             </div>
                                                         </td>
                                                         <td className="border border-black px-4 py-2">{data.employee_id || 'NIL'}</td>
+                                                        <td className="border border-black px-4 py-2">
+                                                            {data.interim_date
+                                                                ? new Date(data.interim_date).toLocaleDateString('en-GB').replace(/\//g, '-')
+                                                                : 'NIL'}
+                                                        </td>
                                                         <td className="border border-black px-4 py-2">
                                                             {data.initiation_date
                                                                 ? new Date(data.initiation_date).toLocaleDateString('en-GB').replace(/\//g, '-')
