@@ -357,6 +357,11 @@ const ClientManager = () => {
 
         // console.log(`formData - `, formData);
 
+        const validReportTypes = [
+            "CONFIDENTIAL BACKGROUND SCREENING REPORT",
+            "VENDOR CONFIDENTIAL SCREENING REPORT"
+        ];
+
         let payload = {
             client_application_id: formData.id,
             branch_id: branchData?.branch_id,
@@ -369,7 +374,7 @@ const ClientManager = () => {
             location: formData.location,
             batch_number: formData.batchNumber,
             sub_client: formData.subClient,
-            photo: formData.photo, // Ensure photo is passed for update
+            photo: formData.photo,
             services: selectedServiceIds,
             package: formData.package,
             gender: formData.gender,
@@ -379,7 +384,11 @@ const ClientManager = () => {
             ticket_id: formData.ticket_id,
             sub_client: formData.sub_client,
             photo: formData.photo,
-            generate_report_type: formData.generate_report_type || 'CONFIDENTIAL BACKGROUND SCREENING REPOR',
+
+            generate_report_type: validReportTypes.includes(formData.generate_report_type)
+                ? formData.generate_report_type
+                : "CONFIDENTIAL BACKGROUND SCREENING REPORT",
+
             location: formData.location,
             send_mail: fileCount === 0 ? 1 : 0,
         };
