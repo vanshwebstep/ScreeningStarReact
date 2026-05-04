@@ -206,7 +206,7 @@ const InactiveClients = () => {
         const imgHeight = 35;
         const imgX = 20;
 
-        const qrCodeBase64 = "https://webstepdev.com/screeningstarAssets/advocate.png";
+        const qrCodeBase64 = "/advocate.png";
         doc.addImage(qrCodeBase64, "PNG", imgX, blockY, imgWidth, imgHeight);
 
         // Vertical line next to image
@@ -702,7 +702,7 @@ const InactiveClients = () => {
         const fontSizeHeading = 13;
         const fontSizeParagraph = 10;
 
-        const qrCodeBase64 = "https://webstepdev.com/screeningstarAssets/advocate.png";
+        const qrCodeBase64 = "/advocate.png";
         doc.addImage(qrCodeBase64, "PNG", imgX, blockY, imgWidth, imgHeight);
 
         // Draw vertical line next to image
@@ -1176,7 +1176,7 @@ const InactiveClients = () => {
         const imgHeight = 35;
         const imgX = 20;
 
-        const qrCodeBase64 = "https://webstepdev.com/screeningstarAssets/advocate.png";
+        const qrCodeBase64 = "/advocate.png";
         doc.addImage(qrCodeBase64, "PNG", imgX, blockY, imgWidth, imgHeight);
 
         // Draw vertical line next to image
@@ -1633,7 +1633,7 @@ const InactiveClients = () => {
 
 
 
-        const headerImageUrl = "https://webstepdev.com/screeningstarAssets/advocate.png";
+        const headerImageUrl = "/advocate.png";
         const stampImageUrl = Signature;
 
         const fetchImageBuffer = async url => {
@@ -1928,7 +1928,7 @@ const InactiveClients = () => {
             "MANJUNATH.9738812694@GMAIL.COM",
         ];
 
-        const headerImageUrl = "https://webstepdev.com/screeningstarAssets/advocate.png";
+        const headerImageUrl = "/advocate.png";
         const stampImageUrl = Signature;
 
         const fetchImageBuffer = async url => {
