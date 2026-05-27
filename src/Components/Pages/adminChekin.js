@@ -2151,7 +2151,107 @@ const AdminChekin = () => {
 
         setLoadingGenrate(null);
     }
+const handleExportToJSON = () => {
+  const isQCPending = (item) =>
+    item.overall_status === "completed" && item.is_verify !== "yes";
 
+  const isNotReady = (item) => item.overall_status !== "completed";
+
+  const nonCompleted = filteredData.filter(
+    (item) => isNotReady(item) || isQCPending(item)
+  );
+
+  if (nonCompleted.length === 0) {
+    Swal.fire("No Records Found", "No non-completed or QC pending records are available for export.", "info");
+    return;
+  }
+
+  const exportData = nonCompleted.map((item, index) => {
+    const parseDocuments = (raw) => {
+      if (!raw || typeof raw !== "string" || raw.trim() === "") return [];
+      return raw.split(",").map((url) => url.trim()).filter(Boolean);
+    };
+
+    const initiationDate = item.initiation_date ? new Date(item.initiation_date) : null;
+    const reportDate = item.report_date ? new Date(item.report_date) : null;
+    const deadlineDate = item.deadline_date ? new Date(item.deadline_date) : null;
+
+    const completedIn =
+      initiationDate && reportDate
+        ? Math.floor((reportDate - initiationDate) / (1000 * 60 * 60 * 24))
+        : null;
+
+    const daysDelayed =
+      reportDate && deadlineDate && reportDate > deadlineDate
+        ? Math.floor((reportDate - deadlineDate) / (1000 * 60 * 60 * 24))
+        : 0;
+
+    return {
+      sl_no: index + 1,
+      application_id: item.application_id || null,
+      name: item.name || null,
+      employee_id: item.employee_id || null,
+      sub_client: item.sub_client || null,
+      location: item.location || null,
+      check_id: item.check_id || null,
+      ticket_id: item.ticket_id || null,
+      case_id: item.case_id || null,
+      batch_no: item.batch_no || null,
+      overall_status: item.overall_status || null,
+      report_type: item.report_type || null,
+      initiation_date: formatDate(item.initiation_date),
+      interim_date: formatDate(item.interim_date),
+      deadline_date: formatDate(item.deadline_date),
+      report_date: formatDate(item.report_date),
+      completed_in_days: completedIn,
+      days_delayed: daysDelayed,
+      report_generated_by: item.report_generated_by_name || null,
+      qc_done_by: item.qc_done_by_name || null,
+      is_highlight: item.is_highlight === 1,
+      is_verify: item.is_verify || null,
+      first_insufficiency_marks: formatJsonForExcel(item.first_insufficiency_marks),
+      first_insuff_date: formatDate(item.first_insuff_date, true),
+      first_insuff_reopened_date: formatDate(item.first_insuff_reopened_date),
+      second_insufficiency_marks: formatJsonForExcel(item.second_insufficiency_marks),
+      second_insuff_date: formatDate(item.second_insuff_date, true),
+      second_insuff_reopened_date: item.second_insuff_reopened_date || null,
+      third_insufficiency_marks: formatJsonForExcel(item.third_insufficiency_marks),
+      third_insuff_date: formatDate(item.third_insuff_date, true),
+      third_insuff_reopened_date: item.third_insuff_reopened_date || null,
+      delay_reason: formatJsonForExcel(item.delay_reason),
+      attach_documents: parseDocuments(item.attach_documents),
+      report_completed_status: item.report_completed_status || null,
+    };
+  });
+
+  // ✅ Parent wrapper with branch/company meta
+  const exportPayload = {
+    exported_at: new Date().toISOString(),
+    branch_name: branchName,
+    company_name: companyName,
+    tat_days: adminTAT,
+    customer_emails: customerEmails,
+    total_records: exportData.length,
+    records: exportData,
+  };
+
+  const jsonString = JSON.stringify(exportPayload, null, 2);
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `applications-export-${branchName}-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  Swal.fire(
+    "Exported Successfully",
+    `${exportData.length} record(s) exported successfully.`,
+    "success"
+  );
+};
 
     useEffect(() => {
         fetchData();
@@ -2852,13 +2952,21 @@ const AdminChekin = () => {
                 <div className='md:flex justify-between items-baseline mb-6 '>
                     <div className=" text-left">
                         <div className='flex items-center gap-5'>
-                            <button
-                                className="bg-green-500 hover:scale-105  hover:bg-green-600 text-white px-6 py-2 rounded"
-                                onClick={handleExportToExcel}
-                            >
-                                Export to Excel
-                            </button>
+                            <div className="flex items-center gap-5">
+                                <button
+                                    className="bg-green-500 hover:scale-105  hover:bg-green-600 text-white px-6 py-2 rounded"
+                                    onClick={handleExportToExcel}
+                                >
+                                    Export to Excel
+                                </button>
 
+                                <button
+                                    className="bg-purple-500 hover:scale-105 hover:bg-purple-600 text-white px-6 py-2 rounded"
+                                    onClick={handleExportToJSON}
+                                >
+                                    Export Non-Completed JSON
+                                </button>
+                            </div>
                             {selectedRows.length > 0 &&
                                 filteredData.filter(
                                     (data) =>
