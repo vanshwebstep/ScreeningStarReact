@@ -1019,8 +1019,7 @@ const AdminChekin = () => {
         let headerTableData;
         const previousY = barY + companyBarHeight;
         const startY = previousY + 7;
-
-        if (generate_report_type == 'CONFIDENTIAL BACKGROUND SCREENING REPORT') {
+        if (generate_report_type?.toUpperCase() == 'CONFIDENTIAL BACKGROUND SCREENING REPORT') {
             headerTableData = [
                 ["REFERENCE ID", String(applicationInfo.application_id).toUpperCase(), "DATE OF BIRTH", formatDate(applicationInfo.dob) || "N/A"],
                 ["EMPLOYEE ID", String(applicationInfo.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(applicationInfo.first_insuff_reopened_date, true) || "N/A"],
@@ -1028,7 +1027,7 @@ const AdminChekin = () => {
                 // ["VERIFICATION PURPOSE", (applicationInfo.verification_purpose || "EMPLOYMENT").toUpperCase(), "VERIFICATION STATUS", (applicationInfo.final_verification_status || "N/A").toUpperCase()],
                 ["REPORT TYPE", (applicationInfo.report_type || "EMPLOYMENT").replace(/_/g, " ").toUpperCase(), "REPORT STATUS", (applicationInfo.report_status || "N/A").toUpperCase()]
             ];
-        } else if (generate_report_type == 'VENDOR CONFIDENTIAL SCREENING REPORT') {
+        } else if (generate_report_type?.toUpperCase() == 'VENDOR CONFIDENTIAL SCREENING REPORT') {
             headerTableData = [
                 ["REFERENCE ID", String(applicationInfo.application_id).toUpperCase(), "DATE OF INCORPORATION", formatDate(applicationInfo.dob) || "N/A"],
                 ["EMPLOYEE ID", String(applicationInfo.employee_id || "N/A").toUpperCase(), "INSUFF CLEARED", formatDate(applicationInfo.first_insuff_reopened_date, true) || "N/A"],
@@ -1038,7 +1037,6 @@ const AdminChekin = () => {
                 ["REPORT TYPE", (applicationInfo.report_type || "EMPLOYMENT").replace(/_/g, " ").toUpperCase()]
             ];
         }
-
         const colorMapping = {
             Yellow: 'yellow',
             Red: 'red',
@@ -1047,10 +1045,14 @@ const AdminChekin = () => {
             Orange: 'orange',
             Pink: 'pink',
         };
+console.log("Header data Data:", data);
+
         doc.autoTable({
             body: headerTableData,
             didParseCell: function (data) {
                 const { column, cell } = data;
+console.log("column column Data:", column);
+console.log("cell cell Data:", cell);
 
                 // Apply bold font to first and third columns (headings)
                 if (column.index === 0 || column.index === 2) {
