@@ -1076,7 +1076,7 @@ const BackgroundVerificationForm = () => {
                                             ref={(el) => (refs.current["aadhaar_card"] = el)}
                                         />
                                         {errors.aadhaar_card && <p className="text-red-500">{errors.aadhaar_card}</p>}
-                                          {cefApp && cefApp.aadhaar_card && (
+                                        {cefApp && cefApp.aadhaar_card && (
                                             <div className="mt-2 object-cover max-w-60 rounded-md">
                                                 <FileViewer fileUrl={cefApp.aadhaar_card} className="" />
                                             </div>
